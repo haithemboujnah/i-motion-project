@@ -1,0 +1,226 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": [
+        "bonjour", "salut", "hello", "coucou", "hey",
+        "bonsoir", "bienvenue", "yo", "slt", "bonjour à tous",
+        "salut toi", "bonjour l'ami", "hello tout le monde",
+        "salut les gens", "bonjour équipe", "coucou c'est moi",
+        "hey comment ça va", "bonjour vous allez bien",
+        "salut ça roule", "bonsoir tout le monde", "hello ici"
+      ],
+      "responses": [
+        "Bonjour ! Comment puis-je vous aider aujourd'hui ? 😊",
+        "Salut ! Je suis ravi de vous assister !",
+        "Hey ! Que puis-je faire pour vous ?",
+        "Bonjour ! Une question sur votre entraînement ?",
+        "Coucou ! Prêt pour une nouvelle séance ? 💪",
+        "Bonjour ! Quelle belle journée pour s'entraîner !"
+      ]
+    },
+    {
+      "tag": "program",
+      "patterns": [
+        "programme", "entraînement", "workout", "séance",
+        "exercice", "musculation", "cardio", "perte de poids",
+        "prise de masse", "remise en forme", "mon programme",
+        "programme personnalisé", "planning entraînement",
+        "programme sportif", "entraînement du jour",
+        "je veux un programme", "créer mon programme",
+        "mon programme actuel", "changer mon programme",
+        "programme pour débutant", "programme pour avancé",
+        "programme hebdomadaire", "planning de la semaine"
+      ],
+      "responses": [
+        "Votre programme est personnalisé selon vos objectifs ! 💪 Consultez-le dans l'onglet 'Programmes'.",
+        "Je peux vous aider à générer un nouveau programme. Allez dans l'onglet 'Programmes' et cliquez sur 'Générer'.",
+        "Votre programme actif est disponible dans votre espace. Vous pouvez le consulter à tout moment.",
+        "Les programmes sont adaptés à votre niveau et à vos objectifs. N'hésitez pas à en générer un nouveau !",
+        "Votre programme est conçu par notre IA pour vous offrir les meilleurs résultats ! 🚀",
+        "Un programme sur mesure selon vos objectifs : perte de poids, prise de masse ou remise en forme."
+      ]
+    },
+    {
+      "tag": "session",
+      "patterns": [
+        "réserver", "séance", "créneau", "disponible",
+        "planning", "horaire", "réservation", "annuler",
+        "réserver une séance", "planning séance",
+        "quand puis-je venir", "créneau disponible",
+        "emploi du temps", "mes séances", "réservation séance",
+        "prendre un rendez-vous", "programmer une séance",
+        "séance EMS", "séance cardio", "séance musculation",
+        "annuler ma séance", "modifier ma réservation"
+      ],
+      "responses": [
+        "Vous pouvez réserver une séance dans l'onglet 'Séances' 📅",
+        "Les créneaux disponibles sont affichés en temps réel.",
+        "Pensez à réserver à l'avance pour garantir votre place !",
+        "Vous pouvez annuler votre séance jusqu'à 24h avant.",
+        "Consultez votre planning personnel pour voir vos prochaines séances.",
+        "Les séances EMS sont disponibles en créneaux de 45 minutes.",
+        "N'oubliez pas de pointer votre présence à l'accueil."
+      ]
+    },
+    {
+      "tag": "performance",
+      "patterns": [
+        "performance", "progression", "résultat", "poids",
+        "imc", "mesure", "évolution", "statistiques", "graphique",
+        "mes performances", "mes résultats", "progrès",
+        "objectif", "atteindre", "progression physique",
+        "je perds du poids", "je prends du muscle",
+        "mes mesures", "mon évolution", "graphique poids",
+        "courbe de progression", "résultats sportifs",
+        "bilan physique", "mon IMC"
+      ],
+      "responses": [
+        "Vos performances sont suivies en détail 📊 Consultez votre évolution dans l'onglet 'Performances'.",
+        "Votre IMC est calculé automatiquement à chaque mesure.",
+        "Félicitations pour votre progression ! Continuez comme ça ! 🎉",
+        "Les graphiques d'évolution vous montrent vos progrès au fil du temps.",
+        "Chaque mesure vous rapproche de vos objectifs ! 💪",
+        "Visualisez votre progression avec des graphiques interactifs.",
+        "Comparez vos mesures pour voir votre évolution."
+      ]
+    },
+    {
+      "tag": "gamification",
+      "patterns": [
+        "points", "badge", "défi", "classement", "récompense",
+        "trophée", "gamification", "challenge", "mes points",
+        "mes badges", "défi du mois", "classement général",
+        "gagner des points", "débloquer un badge",
+        "nombre de points", "mon classement",
+        "challenge cardio", "défi musculation", "badges obtenus"
+      ],
+      "responses": [
+        "Vous gagnez des points à chaque séance ! 🏆 Consultez-les dans l'onglet 'Gamification'.",
+        "Débloquez des badges en atteignant vos objectifs !",
+        "Participez aux défis mensuels pour gagner plus de points !",
+        "Vous êtes dans le top des adhérents ! Continuez ! 🌟",
+        "Chaque point vous rapproche de nouveaux badges !",
+        "Les défis sont renouvelés chaque mois pour vous motiver."
+      ]
+    },
+    {
+      "tag": "coach",
+      "patterns": [
+        "coach", "entraîneur", "prof", "moniteur",
+        "aide", "conseil", "avis", "recommandation",
+        "mon coach", "parler à mon coach",
+        "besoin d'un coach", "conseil personnalisé",
+        "contacter mon coach", "prendre rdv coach",
+        "suivi coach", "accompagnement personnalisé"
+      ],
+      "responses": [
+        "Votre coach est disponible pour vous accompagner !",
+        "N'hésitez pas à contacter votre coach pour des conseils.",
+        "Les coachs sont là pour vous aider à progresser.",
+        "Un suivi personnalisé est proposé par votre coach.",
+        "Prenez rendez-vous avec votre coach pour un bilan personnalisé.",
+        "Votre coach peut ajuster votre programme selon vos besoins."
+      ]
+    },
+    {
+      "tag": "motivation",
+      "patterns": [
+        "motivation", "encouragement", "détermination",
+        "fatigué", "difficile", "abandonner", "découragé",
+        "j'ai besoin de motivation", "je suis fatigué",
+        "c'est dur", "j'ai mal", "je n'y arrive pas",
+        "je veux abandonner", "pas de motivation",
+        "besoin d'encouragement", "remonter le moral"
+      ],
+      "responses": [
+        "Chaque séance vous rapproche de vos objectifs ! 💪",
+        "La persévérance est la clé du succès !",
+        "Vous êtes plus fort que vous ne le pensez !",
+        "N'abandonnez pas, les résultats viendront !",
+        "Rappelez-vous pourquoi vous avez commencé !",
+        "Les plus grands succès viennent des moments les plus difficiles ! 🌟",
+        "Vous êtes capable de grandes choses, croyez en vous !",
+        "La progression est parfois lente, mais elle est toujours là."
+      ]
+    },
+    {
+      "tag": "nutrition",
+      "patterns": [
+        "nutrition", "alimentation", "régime", "manger",
+        "repas", "calories", "protéines", "glucides", "lipides",
+        "que manger", "conseils nutrition", "repas équilibré",
+        "sport et alimentation", "bonnes habitudes",
+        "repas avant séance", "repas après séance",
+        "hydratation", "boire de l'eau", "alimentation saine",
+        "régime sportif", "menu type"
+      ],
+      "responses": [
+        "Une bonne nutrition est essentielle pour vos objectifs ! 🥗",
+        "Consultez nos conseils nutritionnels dans l'application.",
+        "L'alimentation représente 70% des résultats.",
+        "Pensez à bien vous hydrater avant et après l'entraînement !",
+        "Des repas équilibrés vous aideront à atteindre vos objectifs plus rapidement.",
+        "Protéines, glucides, lipides : l'équilibre est la clé !",
+        "Un apport en protéines est important pour la récupération musculaire."
+      ]
+    },
+    {
+      "tag": "technical",
+      "patterns": [
+        "bug", "erreur", "problème", "technique",
+        "plante", "fonctionne pas", "paiement", "abonnement",
+        "ça marche pas", "problème technique",
+        "application bug", "erreur d'affichage",
+        "connexion impossible", "mot de passe oublié",
+        "compte bloqué", "application lent",
+        "notification ne marche pas"
+      ],
+      "responses": [
+        "Je comprends, je vais vous aider avec ce problème technique.",
+        "Un administrateur va être notifié de votre problème.",
+        "Pouvez-vous décrire plus précisément le problème ?",
+        "Essayez de redémarrer l'application si le problème persiste.",
+        "Je vous recommande de contacter le support technique pour une résolution rapide.",
+        "Nous travaillons à améliorer l'application en continu.",
+        "Assurez-vous d'avoir la dernière version de l'application."
+      ]
+    },
+    {
+      "tag": "abonnement",
+      "patterns": [
+        "abonnement", "paiement", "tarif", "prix", "coût",
+        "forfait", "mensuel", "annuel", "renouvellement",
+        "résilier", "arrêter", "facture", "paiement en ligne",
+        "carte bancaire", "prélèvement", "abonnement libre",
+        "offre", "promotion", "réduction"
+      ],
+      "responses": [
+        "Consultez nos offres d'abonnement dans l'onglet 'Abonnements' 💳",
+        "Plusieurs forfaits sont disponibles selon vos besoins.",
+        "Vous pouvez résilier votre abonnement à tout moment.",
+        "Les paiements sont sécurisés et effectués en ligne.",
+        "Des offres promotionnelles sont régulièrement disponibles.",
+        "Contactez l'accueil pour des informations sur les tarifs."
+      ]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": [
+        "au revoir", "bye", "salut", "à plus", "à bientôt",
+        "merci", "c'est tout", "fin", "a plus",
+        "bonne journée", "à la prochaine", "merci beaucoup",
+        "merci pour l'aide", "à demain", "plus tard",
+        "bonne continuation", "bye bye"
+      ],
+      "responses": [
+        "Au revoir ! À bientôt sur I-Motion ! 👋",
+        "Bonne journée ! N'hésitez pas si vous avez d'autres questions.",
+        "À plus tard ! Continuez vos efforts ! 💪",
+        "Merci d'avoir discuté avec moi !",
+        "Passez une excellente journée ! 🌟",
+        "Ravie d'avoir pu vous aider ! À bientôt."
+      ]
+    }
+  ]
+}
