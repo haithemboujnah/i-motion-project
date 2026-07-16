@@ -289,6 +289,7 @@ Module permettant d'analyser l'évolution physique des adhérents grâce aux don
 - **Git** - Versionnement
 
 ## 📁 Structure du Projet
+```text
 i-motion-project/
 │
 ├── backend/
