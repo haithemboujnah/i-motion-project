@@ -1,6 +1,5 @@
 # 🏋️ I-Motion - Plateforme de Gestion Sportive
 
-![I-Motion Banner](https://www.imotion-ems.com/wp-content/uploads/2021/06/logo-i-motion-club-500.png.webp)
 ![React](https://img.shields.io/badge/React-18-blue)
 ![Node](https://img.shields.io/badge/Node.js-Express-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
