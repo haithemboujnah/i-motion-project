@@ -312,6 +312,7 @@ i-motion-project/
 │   └── main.py
 │
 └── README.md
+```
 
 ## 🚀 Installation
 
