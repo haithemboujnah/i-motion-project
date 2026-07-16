@@ -53,7 +53,7 @@ I-Motion est une plateforme web complète de gestion de salle de sport et de sui
 ### Backend
 - **Node.js** - Runtime JavaScript
 - **Express.js** - Framework web
-- **PostgreSQL** - Base de données
+- **pg (node-postgres)** - Driver PostgreSQL pour Node.js
 - **JWT** - Authentification
 - **BCrypt** - Hashage des mots de passe
 - **Nodemailer** - Envoi d'emails
@@ -78,6 +78,9 @@ I-Motion est une plateforme web complète de gestion de salle de sport et de sui
 - **QRCode.react** - Génération QR Code
 - **React QR Reader** - Scan QR Code
 
+### Base de données
+- **PostgreSQL** - Système de gestion de base de données relationnelle
+
 ### DevOps
 - **Git** - Versionnement
 
@@ -99,25 +102,25 @@ cd i-motion-project
 
 ## 🎯 Roadmap
 ### Version 1.0 (Actuelle)
-✅ Authentification complète (3 rôles)
-✅ Gestion des séances
-✅ Suivi des performances
-✅ Programmes IA personnalisés
-✅ Gamification (points, badges, défis)
-✅ Chatbot IA
-✅ QR Code pour pointage
-✅ Dashboard BI
-✅ Feedback & Analyse NLP
-✅ Dark/Light Mode
+- ✅ Authentification complète (3 rôles)
+- ✅ Gestion des séances
+- ✅ Suivi des performances
+- ✅ Programmes IA personnalisés
+- ✅ Gamification (points, badges, défis)
+- ✅ Chatbot IA
+- ✅ QR Code pour pointage
+- ✅ Dashboard BI
+- ✅ Feedback & Analyse NLP
+- ✅ Dark/Light Mode
 
 ### Version 2.0 (À venir)
-⏳ Application mobile (React Native)
-⏳ Notifications push natives
-⏳ Intégration Google Calendar
-⏳ Apple Health / Google Fit
-⏳ Visioconférence pour cours à distance
-⏳ Programme adaptatif en temps réel
-⏳ Analyse prédictive avancée
+- ⏳ Application mobile (React Native)
+- ⏳ Notifications push natives
+- ⏳ Intégration Google Calendar
+- ⏳ Apple Health / Google Fit
+- ⏳ Visioconférence pour cours à distance
+- ⏳ Programme adaptatif en temps réel
+- ⏳ Analyse prédictive avancée
 
 ## 👥 Équipe
 - Architecte Technique - [Haithem Boujnah]
