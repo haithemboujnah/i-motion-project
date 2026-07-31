@@ -6,6 +6,12 @@ export const gamificationService = {
     return response.data;
   },
 
+  // ✅ Ajouter la méthode getPointsHistory
+  getPointsHistory: async (limit = 20) => {
+    const response = await api.get(`/gamification/points/history?limit=${limit}`);
+    return response.data;
+  },
+
   getBadges: async () => {
     const response = await api.get('/gamification/badges');
     return response.data;

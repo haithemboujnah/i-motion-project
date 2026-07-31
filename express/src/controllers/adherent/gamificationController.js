@@ -20,6 +20,27 @@ class GamificationController {
     }
   }
 
+  // ✅ Récupérer l'historique des points (NOUVEAU)
+  static async getPointsHistory(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { limit = 50 } = req.query;
+      
+      const history = await Gamification.getPointsHistory(userId, parseInt(limit));
+      
+      res.json({
+        success: true,
+        data: { history }
+      });
+    } catch (error) {
+      console.error('Error getting points history:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération de l\'historique des points'
+      });
+    }
+  }
+
   // ✅ Récupérer les badges
   static async getBadges(req, res) {
     try {

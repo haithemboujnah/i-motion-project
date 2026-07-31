@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FaCheck, FaCrown, FaCreditCard, FaSpinner, FaShieldAlt,
-  FaClock, FaStar, FaLock, FaCalendarCheck
+  FaClock, FaStar, FaLock, FaCalendarCheck, FaTimes,
+  FaArrowLeft, FaSync, FaBell, FaEnvelope, FaExclamationTriangle
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -50,11 +51,16 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
     try {
       setLoading(true);
       const response = await paymentService.createPaymentIntent(planId);
+      
       if (response.success) {
         setClientSecret(response.data.clientSecret);
         setPaymentIntentId(response.data.paymentIntentId);
+      } else {
+        setError('Erreur lors de l\'initialisation du paiement');
+        toast.error('Erreur lors de l\'initialisation');
       }
     } catch (error) {
+      console.error('❌ Error creating payment intent:', error);
       setError('Erreur lors de l\'initialisation du paiement');
       toast.error('Erreur lors de l\'initialisation');
     } finally {
@@ -66,6 +72,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
     e.preventDefault();
     
     if (!stripe || !elements || !clientSecret) {
+      toast.error('Le système de paiement n\'est pas prêt');
       return;
     }
     
@@ -82,6 +89,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
             card: cardElement,
             billing_details: {
               name: authService.getUser()?.first_name + ' ' + authService.getUser()?.last_name,
+              email: authService.getUser()?.email,
             },
           },
         }
@@ -95,7 +103,11 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
       }
       
       if (paymentIntent.status === 'succeeded') {
-        const confirmResponse = await paymentService.confirmPayment(paymentIntent.id);
+        const confirmResponse = await paymentService.confirmPayment({
+          paymentIntentId: paymentIntent.id,
+          testMode: false
+        });
+        
         if (confirmResponse.success) {
           toast.success('🎉 Paiement confirmé ! Abonnement activé');
           onSuccess(confirmResponse.data.subscription);
@@ -103,8 +115,12 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
           setError('Erreur lors de la confirmation');
           toast.error('Erreur lors de la confirmation');
         }
+      } else {
+        setError(`Statut du paiement: ${paymentIntent.status}`);
+        toast.error(`Paiement non finalisé: ${paymentIntent.status}`);
       }
     } catch (err) {
+      console.error('❌ Payment error:', err);
       setError(err.message);
       toast.error(err.message);
     } finally {
@@ -136,7 +152,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-700">Vous allez payer</p>
-            <p className="text-2xl font-bold text-blue-600">{planPrice}€</p>
+            <p className="text-2xl font-bold text-blue-600">{planPrice} DT</p>
             <p className="text-xs text-gray-500">pour l'abonnement {planName}</p>
           </div>
           <div className="p-3 bg-blue-100 rounded-full">
@@ -182,7 +198,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
           ) : (
             <>
               <FaLock />
-              Payer {planPrice}€
+              Payer {planPrice}DT
             </>
           )}
         </button>
@@ -220,6 +236,9 @@ const SubscriptionPage = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [step, setStep] = useState('plans');
   const [subscription, setSubscription] = useState(null);
+  const [renewalLoading, setRenewalLoading] = useState(false);
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [renewalDuration, setRenewalDuration] = useState('monthly');
 
   useEffect(() => {
     fetchData();
@@ -276,9 +295,35 @@ const SubscriptionPage = () => {
     }
   };
 
+  // ✅ Demander le renouvellement (UNIQUEMENT pour les expirés)
+  const handleRequestRenewal = async () => {
+    if (!window.confirm('Souhaitez-vous demander le renouvellement de votre abonnement ?')) {
+      return;
+    }
+    
+    setRenewalLoading(true);
+    try {
+      const response = await paymentService.requestRenewal();
+      
+      if (response.success) {
+        toast.success('✅ Demande de renouvellement envoyée !');
+        setShowRenewalModal(false);
+        await fetchData();
+      } else {
+        toast.error(response.error || 'Erreur lors de la demande');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Erreur lors de la demande');
+    } finally {
+      setRenewalLoading(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       'active': 'badge-success',
+      'pending_renewal': 'badge-warning',
+      'renewal_rejected': 'badge-danger',
       'cancelling': 'badge-warning',
       'cancelled': 'badge-danger',
       'past_due': 'badge-warning',
@@ -290,6 +335,8 @@ const SubscriptionPage = () => {
   const getStatusLabel = (status) => {
     const labels = {
       'active': 'Actif',
+      'pending_renewal': 'Renouvellement en attente',
+      'renewal_rejected': 'Renouvellement refusé',
       'cancelling': 'En cours d\'annulation',
       'cancelled': 'Annulé',
       'past_due': 'En retard',
@@ -298,15 +345,50 @@ const SubscriptionPage = () => {
     return labels[status] || status;
   };
 
-  // ✅ Vérifier si l'utilisateur a un abonnement actif
+  // ✅ Vérifier si l'utilisateur a un abonnement
+  const hasSubscription = currentSubscription !== null;
+  
+  // ✅ Vérifier si l'abonnement est actif
   const isSubscribed = currentSubscription && currentSubscription.status === 'active';
   
   // ✅ Vérifier si l'abonnement est encore valide (date de fin)
   const isSubscriptionValid = () => {
-    if (!currentSubscription || currentSubscription.status !== 'active') return false;
+    if (!currentSubscription) return false;
+    if (currentSubscription.status !== 'active' && currentSubscription.status !== 'pending_renewal') return false;
     const endDate = new Date(currentSubscription.end_date);
     const now = new Date();
     return endDate > now;
+  };
+
+  // ✅ Vérifier si l'abonnement est en attente de renouvellement
+  const isPendingRenewal = currentSubscription && currentSubscription.status === 'pending_renewal';
+
+  // ✅ Vérifier si l'abonnement est expiré
+  const isExpired = () => {
+    if (!currentSubscription) return false;
+    if (currentSubscription.status !== 'active') return false;
+    const endDate = new Date(currentSubscription.end_date);
+    const now = new Date();
+    return endDate < now;
+  };
+
+  // ✅ Vérifier si l'abonnement peut être renouvelé (UNIQUEMENT expiré)
+  const canRequestRenewal = () => {
+    if (!currentSubscription) return false;
+    if (currentSubscription.status === 'pending_renewal') return false;
+    if (currentSubscription.status === 'renewal_rejected') return false;
+    if (currentSubscription.status === 'cancelled') return false;
+    // ✅ UNIQUEMENT pour les abonnements expirés
+    return isExpired();
+  };
+
+  // ✅ Calculer les jours restants avant expiration
+  const getDaysRemaining = () => {
+    if (!currentSubscription || !currentSubscription.end_date) return 0;
+    const endDate = new Date(currentSubscription.end_date);
+    const now = new Date();
+    const diff = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
   };
 
   // ✅ Vérifier si l'utilisateur peut s'abonner
@@ -323,6 +405,9 @@ const SubscriptionPage = () => {
   };
 
   const currentPlan = getCurrentPlan();
+  const daysRemaining = getDaysRemaining();
+  const isSubscriptionExpired = isExpired();
+  const showRenewalButton = isSubscriptionExpired && !isPendingRenewal;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -354,25 +439,35 @@ const SubscriptionPage = () => {
               </div>
             ) : (
               <>
-                {/* Abonnement actuel */}
+                {/* ✅ Abonnement ACTIF - Pas de bouton de renouvellement */}
                 {currentSubscription && isSubscriptionValid() && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 text-white mb-8 shadow-lg"
+                    className={`rounded-2xl p-8 text-white mb-8 shadow-lg ${
+                      isPendingRenewal 
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                        : 'bg-gradient-to-r from-green-500 to-emerald-600'
+                    }`}
                   >
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <FaCalendarCheck className="text-xl" />
+                          {isPendingRenewal ? (
+                            <FaClock className="text-xl" />
+                          ) : (
+                            <FaCalendarCheck className="text-xl" />
+                          )}
                           <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">
-                            Abonnement actif
+                            {isPendingRenewal ? 'Renouvellement en attente' : 'Abonnement actif'}
                           </span>
                         </div>
                         <h2 className="text-2xl font-bold mb-2">
-                          {currentSubscription.plan_type === 'monthly' && 'Abonnement Mensuel'}
-                          {currentSubscription.plan_type === 'quarterly' && 'Abonnement Trimestriel'}
-                          {currentSubscription.plan_type === 'yearly' && 'Abonnement Annuel'}
+                          {currentSubscription.plan_name || 
+                           (currentSubscription.plan_type === 'monthly' && 'Abonnement Mensuel') ||
+                           (currentSubscription.plan_type === 'quarterly' && 'Abonnement Trimestriel') ||
+                           (currentSubscription.plan_type === 'yearly' && 'Abonnement Annuel') ||
+                           currentSubscription.plan_type}
                         </h2>
                         <p className="text-white/80">
                           Valable jusqu'au{' '}
@@ -385,13 +480,20 @@ const SubscriptionPage = () => {
                           </span>
                         </p>
                         <p className="text-sm text-white/60 mt-2">
-                          {currentSubscription.amount}€ / {currentSubscription.plan_type === 'monthly' ? 'mois' : 
+                          {currentSubscription.amount}DT / {currentSubscription.plan_type === 'monthly' ? 'mois' : 
                                                            currentSubscription.plan_type === 'quarterly' ? 'trimestre' :
                                                            'an'}
                         </p>
+                        {isPendingRenewal && (
+                          <p className="text-sm text-yellow-100 mt-2 flex items-center gap-2">
+                            <FaBell className="text-yellow-300" />
+                            Votre demande de renouvellement est en cours de traitement par l'administrateur
+                          </p>
+                        )}
                       </div>
-                      <div className="mt-4 md:mt-0 flex gap-3">
-                        {currentSubscription.status === 'active' && (
+                      <div className="mt-4 md:mt-0 flex flex-col gap-2">
+                        {/* ❌ PAS de bouton "Demander le renouvellement" pour les actifs */}
+                        {!isPendingRenewal && currentSubscription.status === 'active' && (
                           <button
                             onClick={handleCancelSubscription}
                             className="px-6 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition"
@@ -410,8 +512,59 @@ const SubscriptionPage = () => {
                   </motion.div>
                 )}
 
-                {/* Message si abonnement expiré ou en cours d'annulation */}
-                {currentSubscription && !isSubscriptionValid() && (
+                {/* ✅ Abonnement EXPIRÉ - Afficher le bouton de renouvellement */}
+                {currentSubscription && isSubscriptionExpired && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-8 text-white mb-8 shadow-lg"
+                  >
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <FaExclamationTriangle className="text-xl" />
+                          <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">
+                            ⚠️ Abonnement expiré
+                          </span>
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">
+                          {currentSubscription.plan_name || 'Abonnement'}
+                        </h2>
+                        <p className="text-white/80">
+                          Expiré depuis le{' '}
+                          <span className="font-bold">
+                            {new Date(currentSubscription.end_date).toLocaleDateString('fr-FR', {
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </p>
+                        <p className="text-sm text-white/60 mt-2">
+                          Renouvelez votre abonnement pour accéder à toutes les fonctionnalités
+                        </p>
+                      </div>
+                      <div className="mt-4 md:mt-0 flex flex-col gap-2">
+                        {/* ✅ UNIQUEMENT le bouton de renouvellement pour les expirés */}
+                        <button
+                          onClick={() => setShowRenewalModal(true)}
+                          className="px-6 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition flex items-center gap-2"
+                        >
+                          <FaSync /> Renouveler l'abonnement
+                        </button>
+                        <button
+                          onClick={() => navigate('/payment/history')}
+                          className="px-6 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition"
+                        >
+                          Voir historique
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Message si abonnement en cours d'annulation ou refusé */}
+                {currentSubscription && !isSubscriptionValid() && !isSubscriptionExpired && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
                     <div className="flex items-center gap-3">
                       <FaClock className="text-yellow-600 text-xl" />
@@ -419,11 +572,15 @@ const SubscriptionPage = () => {
                         <p className="font-medium text-yellow-800">
                           {currentSubscription.status === 'cancelling' 
                             ? 'Votre abonnement sera résilié à la fin de la période en cours'
+                            : currentSubscription.status === 'renewal_rejected'
+                            ? 'Votre demande de renouvellement a été refusée'
                             : 'Votre abonnement a expiré'}
                         </p>
                         <p className="text-sm text-yellow-700">
                           {currentSubscription.status === 'cancelling'
                             ? `Valable jusqu'au ${new Date(currentSubscription.end_date).toLocaleDateString('fr-FR')}`
+                            : currentSubscription.status === 'renewal_rejected'
+                            ? 'Contactez l\'administrateur pour plus d\'informations'
                             : 'Souscrivez un nouvel abonnement pour continuer à profiter de toutes les fonctionnalités'}
                         </p>
                       </div>
@@ -431,10 +588,10 @@ const SubscriptionPage = () => {
                   </div>
                 )}
 
-                {/* Plans d'abonnement - désactivés si abonnement actif */}
+                {/* Plans d'abonnement */}
                 {step === 'plans' && (
                   <>
-                    {isSubscriptionValid() && (
+                    {isSubscriptionValid() && !isPendingRenewal && (
                       <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
                         <div className="flex items-center gap-3">
                           <FaCheck className="text-green-600 text-xl" />
@@ -485,7 +642,7 @@ const SubscriptionPage = () => {
                             <div className="text-center mb-4">
                               <h3 className="text-xl font-bold text-gray-800">{plan.name}</h3>
                               <div className="mt-2">
-                                <span className="text-4xl font-bold text-gray-900">{plan.price}€</span>
+                                <span className="text-4xl font-bold text-gray-900">{plan.price}DT</span>
                                 <span className="text-gray-500"> / {plan.interval}</span>
                               </div>
                             </div>
@@ -618,6 +775,88 @@ const SubscriptionPage = () => {
           </div>
         </main>
       </div>
+
+      {/* ✅ Modal de demande de renouvellement (UNIQUEMENT pour expirés) */}
+      {showRenewalModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                <FaSync className="text-blue-500" />
+                Renouveler l'abonnement
+              </h2>
+              <button
+                onClick={() => setShowRenewalModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <FaTimes className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <p className="text-sm text-red-700">
+                  ⚠️ Votre abonnement a expiré le{' '}
+                  <strong>{new Date(currentSubscription?.end_date).toLocaleDateString('fr-FR')}</strong>.
+                  <br />
+                  Renouvelez maintenant pour réactiver votre abonnement.
+                </p>
+              </div>
+
+              <div>
+                <label className="label-custom">Durée du renouvellement</label>
+                <select
+                  className="input-logo"
+                  value={renewalDuration}
+                  onChange={(e) => setRenewalDuration(e.target.value)}
+                >
+                  <option value="monthly">1 mois (60 DT)</option>
+                  <option value="quarterly">3 mois (600 DT)</option>
+                  <option value="yearly">1 an (2900 DT)</option>
+                </select>
+              </div>
+
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <FaEnvelope className="text-blue-500" />
+                  <span>Vous recevrez une confirmation par email</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={handleRequestRenewal}
+                  disabled={renewalLoading}
+                  className="flex-1 btn-logo flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {renewalLoading ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Envoi...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheck />
+                      Renouveler
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowRenewalModal(false)}
+                  className="btn-secondary flex-1"
+                  disabled={renewalLoading}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  FaSearch, FaFilter, FaDumbbell, FaClock,
+  FaSearch, FaDumbbell, FaClock,
   FaFire, FaStar, FaInfoCircle, FaVideo,
-  FaImage
+  FaImage, FaFilter, FaTimes,
+  FaBolt, FaRunning, FaWeight, FaHandSparkles,
+  FaUserMd, FaHeart
 } from 'react-icons/fa';
 import Navbar from '../../components/adherent/AdherentNavbar';
 import Sidebar from '../../components/adherent/AdherentSidebar';
@@ -22,31 +24,92 @@ const Exercises = () => {
   });
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
+  const [showFilters, setShowFilters] = useState(false);
+  const modalRef = useRef(null);
 
+  // ✅ Fermer le modal en cliquant à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setSelectedExercise(null);
+      }
+    };
+
+    // ✅ Fermer avec la touche Echap
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setSelectedExercise(null);
+      }
+    };
+
+    if (selectedExercise) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+      // ✅ Empêcher le scroll du body quand le modal est ouvert
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedExercise]);
+
+  // ✅ Catégories adaptées à vos exercices
   const categories = [
-    { value: 'all', label: 'Tous' },
-    { value: 'cardio', label: 'Cardio' },
-    { value: 'musculation', label: 'Musculation' },
-    { value: 'hiit', label: 'HIIT' },
-    { value: 'etirements', label: 'Étirements' }
+    { value: 'all', label: '📋 Tous', icon: FaDumbbell },
+    { value: 'ems', label: '⚡ EMS', icon: FaBolt, color: '#57a1ce' },
+    { value: 'imodel', label: '🏋️ I-Model', icon: FaWeight, color: '#22c55e' },
+    { value: 'ishape', label: '💆 I-Shape', icon: FaHandSparkles, color: '#8b5cf6' },
+    { value: 'iface', label: '✨ I-Face', icon: FaUserMd, color: '#ec4899' }
   ];
 
+  // ✅ Mapping des catégories pour l'affichage
+  const categoryMap = {
+    'ems': { label: 'EMS', icon: '⚡', color: '#57a1ce' },
+    'imodel': { label: 'I-Model', icon: '🏋️', color: '#22c55e' },
+    'ishape': { label: 'I-Shape', icon: '💆', color: '#8b5cf6' },
+    'iface': { label: 'I-Face', icon: '✨', color: '#ec4899' },
+    'cardio': { label: 'Cardio', icon: '🏃', color: '#f59e0b' },
+    'musculation': { label: 'Musculation', icon: '💪', color: '#ef4444' },
+    'hiit': { label: 'HIIT', icon: '🔥', color: '#f97316' },
+    'etirements': { label: 'Étirements', icon: '🧘', color: '#22c55e' }
+  };
+
   const difficulties = [
-    { value: 'all', label: 'Tous niveaux' },
-    { value: 'debutant', label: 'Débutant' },
-    { value: 'intermediaire', label: 'Intermédiaire' },
-    { value: 'avance', label: 'Avancé' }
+    { value: 'all', label: '📊 Tous niveaux' },
+    { value: 'debutant', label: '🟢 Débutant' },
+    { value: 'intermediaire', label: '🟡 Intermédiaire' },
+    { value: 'avance', label: '🔴 Avancé' }
   ];
 
   const muscleGroups = [
-    { value: 'all', label: 'Tous' },
-    { value: 'pectoraux', label: 'Pectoraux' },
-    { value: 'dos', label: 'Dos' },
-    { value: 'jambes', label: 'Jambes' },
-    { value: 'epaules', label: 'Épaules' },
-    { value: 'bras', label: 'Bras' },
-    { value: 'cardiaque', label: 'Cardiaque' }
+    { value: 'all', label: '🎯 Tous' },
+    { value: 'jambes', label: '🦵 Jambes' },
+    { value: 'abdominaux', label: '💪 Abdominaux' },
+    { value: 'dos', label: '🔙 Dos' },
+    { value: 'fessiers', label: '🍑 Fessiers' },
+    { value: 'bras', label: '💪 Bras' },
+    { value: 'corps_entier', label: '🏋️ Corps entier' },
+    { value: 'visage', label: '👤 Visage' },
+    { value: 'lombaires', label: '🔽 Lombaires' }
   ];
+
+  // ✅ Statistiques des exercices par catégorie
+  const getCategoryStats = () => {
+    const stats = {};
+    categories.forEach(cat => {
+      if (cat.value !== 'all') {
+        stats[cat.value] = exercises.filter(ex => ex.category === cat.value).length;
+      }
+    });
+    return stats;
+  };
+
+  const categoryStats = getCategoryStats();
 
   useEffect(() => {
     fetchExercises();
@@ -80,8 +143,9 @@ const Exercises = () => {
 
   const applyFilters = (term, currentFilters) => {
     let filtered = exercises.filter(ex => 
-      ex.name.toLowerCase().includes(term) ||
-      ex.description.toLowerCase().includes(term)
+      ex.name?.toLowerCase().includes(term) ||
+      ex.description?.toLowerCase().includes(term) ||
+      ex.category?.toLowerCase().includes(term)
     );
 
     if (currentFilters.category !== 'all') {
@@ -99,115 +163,204 @@ const Exercises = () => {
     setFilteredExercises(filtered);
   };
 
-  // ✅ Gestionnaire d'erreur d'image
+  const resetFilters = () => {
+    setFilters({
+      category: 'all',
+      difficulty: 'all',
+      muscle_group: 'all'
+    });
+    setSearchTerm('');
+    applyFilters('', { category: 'all', difficulty: 'all', muscle_group: 'all' });
+  };
+
   const handleImageError = (exerciseId) => {
     setImageErrors(prev => ({ ...prev, [exerciseId]: true }));
   };
 
-  // ✅ Obtenir l'URL de l'image
   const getImageUrl = (exercise) => {
-    // Si l'image a déjà une erreur, utiliser default
     if (imageErrors[exercise.id]) {
       return '/exercises/default.jpg';
     }
     
-    // Si l'image est définie dans l'exercice
     if (exercise.image_url) {
-      // Vérifier si c'est une URL complète ou relative
       if (exercise.image_url.startsWith('http://') || exercise.image_url.startsWith('https://')) {
         return exercise.image_url;
       }
-      // Sinon, c'est une URL relative
       return exercise.image_url;
     }
     
-    // Générer une URL par défaut basée sur le nom de l'exercice
-    const nameSlug = exercise.name.toLowerCase().replace(/ /g, '_');
-    return `/exercises/${nameSlug}.jpg`;
+    return '/exercises/default.jpg';
   };
 
   const getDifficultyColor = (difficulty) => {
     const colors = {
-      'debutant': 'bg-green-100 text-green-700',
-      'intermediaire': 'bg-yellow-100 text-yellow-700',
-      'avance': 'bg-red-100 text-red-700'
+      'debutant': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      'intermediaire': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+      'avance': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
     };
-    return colors[difficulty] || 'bg-gray-100 text-gray-700';
+    return colors[difficulty] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
   };
 
-  const getCategoryEmoji = (category) => {
-    const emojis = {
-      'cardio': '🏃',
-      'musculation': '💪',
-      'hiit': '🔥',
-      'etirements': '🧘'
-    };
-    return emojis[category] || '🏋️';
+  const getCategoryInfo = (category) => {
+    return categoryMap[category] || { label: category, icon: '🏋️', color: '#6b7280' };
   };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'ems': '#57a1ce',
+      'imodel': '#22c55e',
+      'ishape': '#8b5cf6',
+      'iface': '#ec4899',
+      'cardio': '#f59e0b',
+      'musculation': '#ef4444',
+      'hiit': '#f97316',
+      'etirements': '#22c55e'
+    };
+    return colors[category] || '#6b7280';
+  };
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.category !== 'all') count++;
+    if (filters.difficulty !== 'all') count++;
+    if (filters.muscle_group !== 'all') count++;
+    return count;
+  };
+
+  const activeFiltersCount = getActiveFiltersCount();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navbar />
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-display font-bold text-gray-900">
-                🏋️ Bibliothèque d'Exercices
-              </h1>
-              <span className="bg-[#57a1ce]/10 text-[#57a1ce] px-4 py-2 rounded-lg font-medium">
-                {filteredExercises.length} exercices
-              </span>
+            {/* En-tête */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <div>
+                <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                  🏋️ Bibliothèque d'Exercices
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  Découvrez tous les exercices disponibles
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Statistiques par catégorie */}
+                <div className="hidden md:flex gap-2">
+                  {Object.entries(categoryStats).map(([key, count]) => {
+                    const info = getCategoryInfo(key);
+                    return (
+                      <span 
+                        key={key}
+                        className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center gap-1"
+                        style={{ color: info.color }}
+                      >
+                        {info.icon} {count}
+                      </span>
+                    );
+                  })}
+                </div>
+                <span className="bg-[#57a1ce]/10 text-[#57a1ce] dark:text-[#7bb8de] px-4 py-2 rounded-lg font-medium">
+                  {filteredExercises.length} exercices
+                </span>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="md:hidden p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition relative"
+                >
+                  <FaFilter className="text-gray-600 dark:text-gray-300" />
+                  {activeFiltersCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#57a1ce] text-white text-xs rounded-full flex items-center justify-center">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Filtres et recherche */}
-            <div className="bg-white rounded-xl p-4 shadow-sm mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
+                  <FaSearch className="absolute left-3 top-3.5 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     placeholder="Rechercher un exercice..."
                     value={searchTerm}
                     onChange={handleSearch}
-                    className="input-logo pl-10"
+                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#57a1ce] focus:border-transparent transition"
                   />
                 </div>
                 
-                <select
-                  value={filters.category}
-                  onChange={(e) => handleFilterChange('category', e.target.value)}
-                  className="input-logo md:w-40"
-                >
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={filters.category}
+                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                    className="px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#57a1ce] focus:border-transparent transition md:w-40"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label} {cat.value !== 'all' && `(${categoryStats[cat.value] || 0})`}
+                      </option>
+                    ))}
+                  </select>
 
-                <select
-                  value={filters.difficulty}
-                  onChange={(e) => handleFilterChange('difficulty', e.target.value)}
-                  className="input-logo md:w-40"
-                >
-                  {difficulties.map(diff => (
-                    <option key={diff.value} value={diff.value}>{diff.label}</option>
-                  ))}
-                </select>
+                  <select
+                    value={filters.difficulty}
+                    onChange={(e) => handleFilterChange('difficulty', e.target.value)}
+                    className="px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#57a1ce] focus:border-transparent transition md:w-40"
+                  >
+                    {difficulties.map(diff => (
+                      <option key={diff.value} value={diff.value}>{diff.label}</option>
+                    ))}
+                  </select>
 
-                <select
-                  value={filters.muscle_group}
-                  onChange={(e) => handleFilterChange('muscle_group', e.target.value)}
-                  className="input-logo md:w-40"
-                >
-                  {muscleGroups.map(mg => (
-                    <option key={mg.value} value={mg.value}>{mg.label}</option>
-                  ))}
-                </select>
+                  <select
+                    value={filters.muscle_group}
+                    onChange={(e) => handleFilterChange('muscle_group', e.target.value)}
+                    className="px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#57a1ce] focus:border-transparent transition md:w-40"
+                  >
+                    {muscleGroups.map(mg => (
+                      <option key={mg.value} value={mg.value}>{mg.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {/* Filtres actifs */}
+              {activeFiltersCount > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  {filters.category !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#57a1ce]/10 text-[#57a1ce] rounded-full text-sm">
+                      Catégorie: {categories.find(c => c.value === filters.category)?.label}
+                      <button onClick={() => handleFilterChange('category', 'all')} className="ml-1 hover:text-red-500">
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filters.difficulty !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
+                      Niveau: {difficulties.find(d => d.value === filters.difficulty)?.label}
+                      <button onClick={() => handleFilterChange('difficulty', 'all')} className="ml-1 hover:text-red-500">
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {filters.muscle_group !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                      Muscle: {muscleGroups.find(m => m.value === filters.muscle_group)?.label}
+                      <button onClick={() => handleFilterChange('muscle_group', 'all')} className="ml-1 hover:text-red-500">
+                        ×
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-12">
+              <div className="flex justify-center py-20">
                 <div className="spinner"></div>
               </div>
             ) : filteredExercises.length > 0 ? (
@@ -216,20 +369,26 @@ const Exercises = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                {filteredExercises.map((exercise) => {
+                {filteredExercises.map((exercise, index) => {
                   const imageUrl = getImageUrl(exercise);
+                  const categoryInfo = getCategoryInfo(exercise.category);
+                  const categoryColor = getCategoryColor(exercise.category);
+                  
                   return (
-                    <div
+                    <motion.div
                       key={exercise.id}
-                      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition cursor-pointer"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group border border-gray-200 dark:border-gray-700"
                       onClick={() => setSelectedExercise(exercise)}
                     >
                       {/* Image */}
-                      <div className="relative h-48 bg-gradient-to-r from-gray-100 to-gray-200">
+                      <div className="relative h-48 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
                         <img
                           src={imageUrl}
                           alt={exercise.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           onError={() => handleImageError(exercise.id)}
                           loading="lazy"
                         />
@@ -239,15 +398,18 @@ const Exercises = () => {
                           </span>
                         </div>
                         <div className="absolute bottom-2 left-2">
-                          <span className="bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                            {getCategoryEmoji(exercise.category)} {exercise.category}
+                          <span 
+                            className="text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm bg-black/50 flex items-center gap-1"
+                          >
+                            <span style={{ color: categoryColor }}>{categoryInfo.icon}</span>
+                            {categoryInfo.label}
                           </span>
                         </div>
                         {imageErrors[exercise.id] && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700">
                             <div className="text-center">
-                              <FaImage className="text-4xl text-gray-400 mx-auto mb-2" />
-                              <span className="text-sm text-gray-500">{exercise.name}</span>
+                              <FaImage className="text-4xl text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                              <span className="text-sm text-gray-500 dark:text-gray-400">{exercise.name}</span>
                             </div>
                           </div>
                         )}
@@ -255,16 +417,16 @@ const Exercises = () => {
 
                       {/* Informations */}
                       <div className="p-4">
-                        <h3 className="font-semibold text-gray-800 text-lg">
+                        <h3 className="font-semibold text-gray-800 dark:text-white text-lg group-hover:text-[#57a1ce] transition">
                           {exercise.name}
                         </h3>
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
                           {exercise.description}
                         </p>
-                        <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                        <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 dark:text-gray-400">
                           <span className="flex items-center gap-1">
                             <FaClock className="text-[#57a1ce]" />
-                            {exercise.duration || 15} min
+                            {exercise.duration || 20} min
                           </span>
                           <span className="flex items-center gap-1">
                             <FaFire className="text-orange-500" />
@@ -282,37 +444,53 @@ const Exercises = () => {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </motion.div>
             ) : (
-              <div className="text-center py-12 bg-white rounded-xl">
-                <FaDumbbell className="text-6xl text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Aucun exercice trouvé</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Essayez de modifier vos filtres de recherche
+              <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <FaDumbbell className="text-6xl text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Aucun exercice trouvé
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {searchTerm || activeFiltersCount > 0 
+                    ? 'Essayez de modifier vos filtres de recherche' 
+                    : 'Aucun exercice disponible pour le moment'}
                 </p>
               </div>
             )}
 
-            {/* Modal d'exercice */}
+            {/* Modal d'exercice - avec fermeture à l'extérieur */}
             {selectedExercise && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={() => setSelectedExercise(null)}
+              >
+                <motion.div
+                  ref={modalRef}
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                       {selectedExercise.name}
                     </h2>
                     <button
                       onClick={() => setSelectedExercise(null)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-500 hover:text-gray-700"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      aria-label="Fermer"
                     >
-                      ✕
+                      <FaTimes className="text-xl" />
                     </button>
                   </div>
 
-                  <div className="relative h-64 bg-gray-100 rounded-xl mb-4 overflow-hidden">
+                  <div className="relative h-64 bg-gray-100 dark:bg-gray-700 rounded-xl mb-4 overflow-hidden">
                     <img
                       src={getImageUrl(selectedExercise)}
                       alt={selectedExercise.name}
@@ -322,39 +500,51 @@ const Exercises = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex gap-4 flex-wrap">
+                    <div className="flex flex-wrap gap-2">
                       <span className={`badge ${getDifficultyColor(selectedExercise.difficulty)}`}>
                         {selectedExercise.difficulty}
                       </span>
                       <span className="badge-primary">
-                        {selectedExercise.category}
+                        {getCategoryInfo(selectedExercise.category).label}
                       </span>
                       <span className="badge-info">
                         {selectedExercise.muscle_group}
                       </span>
                     </div>
 
-                    <p className="text-gray-600">{selectedExercise.description}</p>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      {selectedExercise.description}
+                    </p>
 
-                    <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl">
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                       <div className="text-center">
-                        <p className="text-sm text-gray-500">Durée</p>
-                        <p className="font-semibold">{selectedExercise.duration || 15} min</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Durée</p>
+                        <p className="font-semibold text-gray-800 dark:text-white">
+                          {selectedExercise.duration || 20} min
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-sm text-gray-500">Calories</p>
-                        <p className="font-semibold">{selectedExercise.calories_per_minute || 5} kcal/min</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Calories</p>
+                        <p className="font-semibold text-gray-800 dark:text-white">
+                          {selectedExercise.calories_per_minute || 5} kcal/min
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-sm text-gray-500">Intensité</p>
-                        <p className="font-semibold capitalize">{selectedExercise.difficulty}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Intensité</p>
+                        <p className="font-semibold text-gray-800 dark:text-white capitalize">
+                          {selectedExercise.difficulty}
+                        </p>
                       </div>
                     </div>
 
                     {selectedExercise.instructions && (
                       <div>
-                        <h4 className="font-semibold text-gray-800 mb-2">Instructions</h4>
-                        <p className="text-gray-600">{selectedExercise.instructions}</p>
+                        <h4 className="font-semibold text-gray-800 dark:text-white mb-2">
+                          📝 Instructions
+                        </h4>
+                        <p className="text-gray-600 dark:text-gray-300">
+                          {selectedExercise.instructions}
+                        </p>
                       </div>
                     )}
 
@@ -369,7 +559,7 @@ const Exercises = () => {
                       </a>
                     )}
                   </div>
-                </div>
+                </motion.div>
               </div>
             )}
           </div>

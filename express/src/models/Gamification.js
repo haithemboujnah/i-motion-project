@@ -18,7 +18,27 @@ class Gamification {
       return { total_points: 0, badges_count: 0 };
     }
     
-    return result.rows[0];
+    return { 
+      total_points: parseInt(result.rows[0].total_points) || 0, 
+      badges_count: parseInt(result.rows[0].badges_count) || 0 
+    };
+  }
+
+  // ✅ Récupérer l'historique des points (NOUVEAU)
+  static async getPointsHistory(userId, limit = 50) {
+    const query = `
+      SELECT 
+        id,
+        points,
+        reason,
+        created_at
+      FROM user_points
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2
+    `;
+    const result = await pool.query(query, [userId, limit]);
+    return result.rows;
   }
 
   // ✅ Ajouter des points à un utilisateur
@@ -49,7 +69,6 @@ class Gamification {
 
   // ✅ Attribuer un badge à un utilisateur
   static async awardBadge(userId, badgeId) {
-    // Vérifier si le badge existe déjà
     const checkQuery = 'SELECT * FROM user_badges WHERE user_id = $1 AND badge_id = $2';
     const checkResult = await pool.query(checkQuery, [userId, badgeId]);
     
@@ -68,11 +87,9 @@ class Gamification {
 
   // ✅ Vérifier et attribuer automatiquement les badges
   static async checkAndAwardBadges(userId) {
-    // Récupérer le total des points
     const pointsResult = await this.getPoints(userId);
     const totalPoints = parseInt(pointsResult.total_points) || 0;
     
-    // Récupérer tous les badges disponibles
     const badgesQuery = 'SELECT * FROM badges ORDER BY points_required ASC';
     const badgesResult = await pool.query(badgesQuery);
     
@@ -112,11 +129,16 @@ class Gamification {
 
   // ✅ Démarrer un défi
   static async startChallenge(userId, challengeId) {
+    const checkQuery = 'SELECT * FROM user_challenges WHERE user_id = $1 AND challenge_id = $2';
+    const checkResult = await pool.query(checkQuery, [userId, challengeId]);
+    
+    if (checkResult.rows.length > 0) {
+      return checkResult.rows[0];
+    }
+    
     const query = `
       INSERT INTO user_challenges (user_id, challenge_id, started_at, progress)
       VALUES ($1, $2, CURRENT_TIMESTAMP, 0)
-      ON CONFLICT (user_id, challenge_id) DO UPDATE 
-      SET started_at = CURRENT_TIMESTAMP, progress = 0
       RETURNING *
     `;
     const result = await pool.query(query, [userId, challengeId]);
@@ -153,26 +175,6 @@ class Gamification {
       LIMIT $1
     `;
     const result = await pool.query(query, [limit]);
-    return result.rows;
-  }
-
-  // ✅ Récupérer le classement par club
-  static async getClubRanking(clubId, limit = 10) {
-    const query = `
-      SELECT 
-        u.id,
-        u.first_name,
-        u.last_name,
-        COALESCE(SUM(up.points), 0) as total_points,
-        RANK() OVER (ORDER BY COALESCE(SUM(up.points), 0) DESC) as rank
-      FROM users u
-      LEFT JOIN user_points up ON u.id = up.user_id
-      WHERE u.role = 'adherent' AND u.club_id = $1 AND u.is_active = true
-      GROUP BY u.id, u.first_name, u.last_name
-      ORDER BY total_points DESC
-      LIMIT $2
-    `;
-    const result = await pool.query(query, [clubId, limit]);
     return result.rows;
   }
 }

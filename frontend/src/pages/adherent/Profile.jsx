@@ -4,7 +4,8 @@ import {
   FaUser, FaEnvelope, FaLock, FaCalendar, 
   FaWeight, FaRuler, FaEdit, FaSave,
   FaDumbbell, FaChartLine, FaHeart, FaUsers,
-  FaExclamationTriangle, FaShieldAlt
+  FaExclamationTriangle, FaShieldAlt, FaFire,
+  FaStar, FaBrain, FaMagic, FaInfoCircle
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -33,6 +34,8 @@ const Profile = () => {
     age: '',
     weight: '',
     height: '',
+    body_fat: '',
+    muscle_mass: '',
     goal: 'remise_en_forme',
     level: 'debutant',
     medical_conditions: ''
@@ -44,23 +47,81 @@ const Profile = () => {
   });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [bmi, setBmi] = useState(null);
+  const [bmiCategory, setBmiCategory] = useState('');
 
+  // ✅ Updated goals with 6 options
   const goals = [
-    { value: 'perte_de_poids', label: 'Perte de poids' },
-    { value: 'prise_de_masse', label: 'Prise de masse' },
-    { value: 'remise_en_forme', label: 'Remise en forme' }
+    { value: 'perte_de_poids', label: 'Perte de poids', icon: '🔥', color: '#ef4444', description: 'Brûlez des calories et perdez du poids' },
+    { value: 'prise_de_masse', label: 'Prise de masse musculaire', icon: '💪', color: '#22c55e', description: 'Développez votre masse musculaire' },
+    { value: 'remise_en_forme', label: 'Remise en forme', icon: '❤️', color: '#57a1ce', description: 'Améliorez votre condition physique' },
+    { value: 'modelage_raffermissement', label: 'Modelage & Raffermissement', icon: '⭐', color: '#ec4899', description: 'Sculptez votre silhouette' },
+    { value: 'recuperation_bien_etre', label: 'Récupération & Bien-être', icon: '🧘', color: '#8b5cf6', description: 'Retrouvez votre tonicité' },
+    { value: 'lifting_naturel', label: 'Lifting naturel & Anti-âge', icon: '✨', color: '#f59e0b', description: 'Raffermissez votre visage' }
   ];
 
   const levels = [
-    { value: 'debutant', label: 'Débutant' },
-    { value: 'intermediaire', label: 'Intermédiaire' },
-    { value: 'avance', label: 'Avancé' }
+    { value: 'debutant', label: 'Débutant', description: 'Pour commencer en douceur' },
+    { value: 'intermediaire', label: 'Intermédiaire', description: 'Pour ceux qui ont déjà de l\'expérience' },
+    { value: 'avance', label: 'Avancé', description: 'Pour les sportifs confirmés' }
   ];
 
   // Déterminer le rôle de l'utilisateur
   const userRole = user?.role || 'adherent';
   const isCoach = userRole === 'coach';
   const isAdmin = userRole === 'admin';
+
+  // ✅ Calculate BMI
+  const calculateBMI = (weight, height) => {
+    if (!weight || !height || height <= 0) return null;
+    const heightInMeters = height / 100;
+    const bmiValue = weight / (heightInMeters * heightInMeters);
+    return parseFloat(bmiValue.toFixed(2));
+  };
+
+  // ✅ Get BMI category
+  const getBMICategory = (bmiValue) => {
+    if (!bmiValue) return '';
+    if (bmiValue < 16.5) return 'Dénutrition';
+    if (bmiValue < 18.5) return 'Insuffisance pondérale';
+    if (bmiValue < 25) return 'Poids normal';
+    if (bmiValue < 30) return 'Surpoids';
+    if (bmiValue < 35) return 'Obésité modérée';
+    if (bmiValue < 40) return 'Obésité sévère';
+    return 'Obésité morbide';
+  };
+
+  // ✅ Get BMI color
+  const getBMIColor = (bmiValue) => {
+    if (!bmiValue) return 'text-gray-400';
+    if (bmiValue < 18.5) return 'text-yellow-500';
+    if (bmiValue < 25) return 'text-green-500';
+    if (bmiValue < 30) return 'text-orange-500';
+    return 'text-red-500';
+  };
+
+  // ✅ Get goal label
+  const getGoalLabel = (goalValue) => {
+    const labels = {
+      'perte_de_poids': 'Perte de poids',
+      'prise_de_masse': 'Prise de masse musculaire',
+      'remise_en_forme': 'Remise en forme',
+      'modelage_raffermissement': 'Modelage & Raffermissement',
+      'recuperation_bien_etre': 'Récupération & Bien-être',
+      'lifting_naturel': 'Lifting naturel & Anti-âge'
+    };
+    return labels[goalValue] || goalValue;
+  };
+
+  // ✅ Get level label
+  const getLevelLabel = (levelValue) => {
+    const labels = {
+      'debutant': 'Débutant',
+      'intermediaire': 'Intermédiaire',
+      'avance': 'Avancé'
+    };
+    return labels[levelValue] || levelValue;
+  };
 
   const refreshProfile = async () => {
     try {
@@ -91,12 +152,33 @@ const Profile = () => {
         age: profile?.age || '',
         weight: profile?.weight || '',
         height: profile?.height || '',
+        body_fat: profile?.body_fat || '',
+        muscle_mass: profile?.muscle_mass || '',
         goal: profile?.goal || 'remise_en_forme',
         level: profile?.level || 'debutant',
         medical_conditions: profile?.medical_conditions || ''
       });
+
+      // ✅ Calculate BMI
+      if (profile?.weight && profile?.height) {
+        const bmiValue = calculateBMI(profile.weight, profile.height);
+        setBmi(bmiValue);
+        setBmiCategory(getBMICategory(bmiValue));
+      }
     }
   }, [user, profile, refreshKey]);
+
+  // ✅ Update BMI when weight or height changes
+  useEffect(() => {
+    if (formData.weight && formData.height) {
+      const bmiValue = calculateBMI(
+        parseFloat(formData.weight), 
+        parseFloat(formData.height)
+      );
+      setBmi(bmiValue);
+      setBmiCategory(getBMICategory(bmiValue));
+    }
+  }, [formData.weight, formData.height]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -108,6 +190,8 @@ const Profile = () => {
         age: parseInt(formData.age) || null,
         weight: parseFloat(formData.weight) || null,
         height: parseFloat(formData.height) || null,
+        body_fat: parseFloat(formData.body_fat) || null,
+        muscle_mass: parseFloat(formData.muscle_mass) || null,
         goal: formData.goal,
         level: formData.level,
         medical_conditions: formData.medical_conditions
@@ -161,6 +245,18 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ Get goal icon
+  const getGoalIcon = (goalValue) => {
+    const goal = goals.find(g => g.value === goalValue);
+    return goal ? goal.icon : '🎯';
+  };
+
+  // ✅ Get goal color
+  const getGoalColor = (goalValue) => {
+    const goal = goals.find(g => g.value === goalValue);
+    return goal ? goal.color : '#57a1ce';
   };
 
   const getNavComponent = () => {
@@ -247,6 +343,14 @@ const Profile = () => {
                     {profile?.level && !isAdmin && (
                       <span className="badge-info">{profile.level}</span>
                     )}
+                    {profile?.goal && !isAdmin && (
+                      <span className="badge" style={{
+                        background: `${getGoalColor(profile.goal)}20`,
+                        color: getGoalColor(profile.goal)
+                      }}>
+                        {getGoalIcon(profile.goal)} {profile.goal}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-theme-muted mt-4">
                     Membre depuis {new Date(user?.created_at).toLocaleDateString('fr-FR')}
@@ -255,12 +359,59 @@ const Profile = () => {
                   {profile && (
                     <div className="mt-4 p-3 bg-theme-secondary rounded-lg text-left text-sm border border-theme">
                       <p className="text-xs text-theme-muted font-medium mb-2">📊 Données actuelles</p>
-                      <div className="grid grid-cols-2 gap-1 text-xs">
-                        {profile.age && <><span className="text-theme-muted">Âge:</span><span className="font-medium text-theme-primary">{profile.age} ans</span></>}
-                        {profile.weight && <><span className="text-theme-muted">Poids:</span><span className="font-medium text-theme-primary">{profile.weight} kg</span></>}
-                        {profile.height && <><span className="text-theme-muted">Taille:</span><span className="font-medium text-theme-primary">{profile.height} cm</span></>}
-                        {profile.goal && <><span className="text-theme-muted">Objectif:</span><span className="font-medium text-theme-primary">{profile.goal}</span></>}
-                        {profile.level && <><span className="text-theme-muted">Niveau:</span><span className="font-medium text-theme-primary">{profile.level}</span></>}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {profile.age && (
+                          <>
+                            <span className="text-theme-muted">Âge:</span>
+                            <span className="font-medium text-theme-primary">{profile.age} ans</span>
+                          </>
+                        )}
+                        {profile.weight && (
+                          <>
+                            <span className="text-theme-muted">Poids:</span>
+                            <span className="font-medium text-theme-primary">{profile.weight} kg</span>
+                          </>
+                        )}
+                        {profile.height && (
+                          <>
+                            <span className="text-theme-muted">Taille:</span>
+                            <span className="font-medium text-theme-primary">{profile.height} cm</span>
+                          </>
+                        )}
+                        {bmi && (
+                          <>
+                            <span className="text-theme-muted">IMC:</span>
+                            <span className={`font-medium ${getBMIColor(bmi)}`}>
+                              {bmi} ({bmiCategory})
+                            </span>
+                          </>
+                        )}
+                        {profile.body_fat !== null && profile.body_fat !== undefined && (
+                          <>
+                            <span className="text-theme-muted">Masse grasse:</span>
+                            <span className="font-medium text-theme-primary">{profile.body_fat}%</span>
+                          </>
+                        )}
+                        {profile.muscle_mass !== null && profile.muscle_mass !== undefined && (
+                          <>
+                            <span className="text-theme-muted">Masse musculaire:</span>
+                            <span className="font-medium text-theme-primary">{profile.muscle_mass} kg</span>
+                          </>
+                        )}
+                        {profile.goal && (
+                          <>
+                            <span className="text-theme-muted">Objectif:</span>
+                            <span className="font-medium" style={{ color: getGoalColor(profile.goal) }}>
+                              {getGoalLabel(profile.goal)}
+                            </span>
+                          </>
+                        )}
+                        {profile.level && (
+                          <>
+                            <span className="text-theme-muted">Niveau:</span>
+                            <span className="font-medium text-theme-primary">{getLevelLabel(profile.level)}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -382,6 +533,81 @@ const Profile = () => {
                           </div>
                         </div>
 
+                        {/* ✅ New fields: Body Fat & Muscle Mass */}
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div>
+                            <label className="label-custom text-theme-primary flex items-center gap-2">
+                              <FaFire className="text-orange-500" />
+                              Masse grasse (%)
+                              <span className="text-xs text-theme-muted font-normal">
+                                (optionnel)
+                              </span>
+                            </label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="3"
+                              max="60"
+                              className={`input-logo ${!isEditing ? 'bg-theme-secondary' : ''}`}
+                              value={formData.body_fat}
+                              onChange={(e) => setFormData({ ...formData, body_fat: e.target.value })}
+                              disabled={!isEditing}
+                              placeholder="Ex: 15"
+                            />
+                          </div>
+                          <div>
+                            <label className="label-custom text-theme-primary flex items-center gap-2">
+                              <FaDumbbell className="text-green-500" />
+                              Masse musculaire (kg)
+                              <span className="text-xs text-theme-muted font-normal">
+                                (optionnel)
+                              </span>
+                            </label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="15"
+                              max="70"
+                              className={`input-logo ${!isEditing ? 'bg-theme-secondary' : ''}`}
+                              value={formData.muscle_mass}
+                              onChange={(e) => setFormData({ ...formData, muscle_mass: e.target.value })}
+                              disabled={!isEditing}
+                              placeholder="Ex: 35"
+                            />
+                          </div>
+                        </div>
+
+                        {/* ✅ BMI Display */}
+                        {bmi && (
+                          <div className="mt-4 p-3 bg-theme-secondary rounded-lg border border-theme">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-theme-primary">
+                                📊 Indice de Masse Corporelle (IMC)
+                              </span>
+                              <span className={`font-bold ${getBMIColor(bmi)}`}>
+                                {bmi} - {bmiCategory}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all ${
+                                  bmi < 18.5 ? 'bg-yellow-500' :
+                                  bmi < 25 ? 'bg-green-500' :
+                                  bmi < 30 ? 'bg-orange-500' :
+                                  'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min((bmi / 40) * 100, 100)}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-xs text-theme-muted mt-1">
+                              <span>16.5</span>
+                              <span>25</span>
+                              <span>30</span>
+                              <span>40</span>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-4 mt-4">
                           <div>
                             <label className="label-custom text-theme-primary">Objectif</label>
@@ -393,10 +619,15 @@ const Profile = () => {
                             >
                               {goals.map((goal) => (
                                 <option key={goal.value} value={goal.value}>
-                                  {goal.label}
+                                  {goal.icon} {goal.label}
                                 </option>
                               ))}
                             </select>
+                            {formData.goal && (
+                              <p className="text-xs text-theme-muted mt-1">
+                                {goals.find(g => g.value === formData.goal)?.description}
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label className="label-custom text-theme-primary">Niveau</label>
@@ -412,6 +643,11 @@ const Profile = () => {
                                 </option>
                               ))}
                             </select>
+                            {formData.level && (
+                              <p className="text-xs text-theme-muted mt-1">
+                                {levels.find(l => l.value === formData.level)?.description}
+                              </p>
+                            )}
                           </div>
                         </div>
 

@@ -4,8 +4,10 @@ import {
   FaDumbbell, FaCalendar, FaClock, FaCheck, 
   FaPlus, FaChartLine, FaFire, FaBrain,
   FaRuler, FaWeight, FaHeart, FaInfoCircle,
-  FaTimes, FaPlay, FaImage, FaRobot, FaStar
+  FaTimes, FaPlay, FaImage, FaRobot, FaStar,
+  FaWifi, FaSpinner
 } from 'react-icons/fa';
+import { MdWifiOff } from 'react-icons/md';
 import { useTheme } from '../../context/ThemeContext';
 import Navbar from '../../components/adherent/AdherentNavbar';
 import Sidebar from '../../components/adherent/AdherentSidebar';
@@ -22,15 +24,55 @@ const Programs = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [mlStatus, setMlStatus] = useState({ available: false, checking: true });
   const [formData, setFormData] = useState({
     goal: 'remise_en_forme',
     level: 'debutant'
   });
 
   const goals = [
-    { value: 'perte_de_poids', label: 'Perte de poids', icon: FaFire, color: '#ef4444', description: 'Brûlez des calories et perdez du poids' },
-    { value: 'prise_de_masse', label: 'Prise de masse', icon: FaDumbbell, color: '#22c55e', description: 'Développez votre masse musculaire' },
-    { value: 'remise_en_forme', label: 'Remise en forme', icon: FaHeart, color: '#57a1ce', description: 'Améliorez votre condition physique' }
+    { 
+      value: 'perte_de_poids', 
+      label: 'Perte de poids', 
+      icon: FaFire, 
+      color: '#ef4444', 
+      description: 'Brûlez des calories et perdez du poids efficacement avec l\'EMS' 
+    },
+    { 
+      value: 'prise_de_masse', 
+      label: 'Prise de masse musculaire', 
+      icon: FaDumbbell, 
+      color: '#22c55e', 
+      description: 'Développez votre masse musculaire avec une stimulation profonde' 
+    },
+    { 
+      value: 'remise_en_forme', 
+      label: 'Remise en forme', 
+      icon: FaHeart, 
+      color: '#57a1ce', 
+      description: 'Améliorez votre condition physique globale' 
+    },
+    { 
+      value: 'modelage_raffermissement', 
+      label: 'Modelage & Raffermissement', 
+      icon: FaStar, 
+      color: '#ec4899', 
+      description: 'Sculptez votre silhouette, raffermissez et réduisez la cellulite' 
+    },
+    { 
+      value: 'recuperation_bien_etre', 
+      label: 'Récupération & Bien-être', 
+      icon: FaHeart, 
+      color: '#8b5cf6', 
+      description: 'Retrouvez votre tonicité (post-partum) et soulagez les douleurs' 
+    },
+    { 
+      value: 'lifting_naturel', 
+      label: 'Lifting naturel & Anti-âge', 
+      icon: FaStar, 
+      color: '#f59e0b', 
+      description: 'Raffermissez votre visage et rajeunissez votre peau' 
+    }
   ];
 
   const levels = [
@@ -38,6 +80,27 @@ const Programs = () => {
     { value: 'intermediaire', label: 'Intermédiaire', icon: FaChartLine, description: 'Pour ceux qui ont déjà de l\'expérience' },
     { value: 'avance', label: 'Avancé', icon: FaBrain, description: 'Pour les sportifs confirmés' }
   ];
+
+  // ✅ Vérifier la disponibilité du ML
+  useEffect(() => {
+    checkMLStatus();
+  }, []);
+
+  const checkMLStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/health');
+      if (response.ok) {
+        setMlStatus({ available: true, checking: false });
+        console.log('✅ ML Service disponible');
+      } else {
+        setMlStatus({ available: false, checking: false });
+        console.log('⚠️ ML Service indisponible');
+      }
+    } catch (error) {
+      setMlStatus({ available: false, checking: false });
+      console.log('⚠️ ML Service indisponible (erreur de connexion)');
+    }
+  };
 
   useEffect(() => {
     fetchPrograms();
@@ -89,13 +152,25 @@ const Programs = () => {
       const confidenceText = confidence 
         ? ` (Confiance: ${Math.round(confidence * 100)}%)` 
         : '';
-      const sourceText = source === 'fastapi' ? ' 🤖 IA' : ' 📋';
       
-      toast.success(`🎉 Programme généré avec succès !${sourceText}${confidenceText}`);
+      let sourceText = '';
+      if (source === 'fastapi') {
+        sourceText = ' avec l\'IA';
+        toast.success(`🎉 Programme généré avec l'IA !${confidenceText}`);
+      } else if (source === 'local') {
+        sourceText = ' localement';
+        toast.success(`🎉 Programme généré localement${confidenceText}`);
+      } else if (source === 'emergency_fallback') {
+        sourceText = ' en mode secours';
+        toast.success(`🎉 Programme généré en mode secours${confidenceText}`);
+      } else {
+        toast.success(`🎉 Programme généré avec succès !${confidenceText}`);
+      }
       
       setShowGenerateModal(false);
       fetchPrograms();
     } catch (error) {
+      console.error('Error generating program:', error);
       toast.error(error.response?.data?.error || 'Erreur lors de la génération');
     } finally {
       setGenerating(false);
@@ -112,24 +187,32 @@ const Programs = () => {
     return found ? found.icon : FaHeart;
   };
 
-  const getDifficultyBadge = (difficulty) => {
-    const badges = {
-      'debutant': { label: 'Débutant', className: 'badge-success' },
-      'intermediaire': { label: 'Intermédiaire', className: 'badge-warning' },
-      'avance': { label: 'Avancé', className: 'badge-danger' }
-    };
-    return badges[difficulty] || badges['debutant'];
-  };
-
   const getCategoryEmoji = (category) => {
     const emojis = {
-      'cardio': '🏃',
-      'musculation': '💪',
-      'hiit': '🔥',
-      'etirements': '🧘',
-      'general': '🏋️'
+      'cardio': '❤️',
+      'force': '💪',
+      'musculation': '🏋️',
+      'étirement': '🧘',
+      'stretching': '🧘',
+      'renforcement': '💪',
+      'equilibre': '⚖️',
+      'balance': '⚖️',
+      'flexibilite': '🤸',
+      'flexibility': '🤸',
+      'endurance': '🏃',
+      'resistance': '🏋️',
+      'ems': '⚡',
+      'electrostimulation': '⚡',
+      'recuperation': '🔄',
+      'recovery': '🔄',
+      'rehabilitation': '🏥',
+      'rehab': '🏥',
+      'visage': '👤',
+      'face': '👤',
+      'abdominaux': '🎯',
+      'core': '🎯'
     };
-    return emojis[category] || '🏋️';
+    return emojis[category?.toLowerCase()] || '🏋️';
   };
 
   const getConfidenceColor = (score) => {
@@ -156,6 +239,19 @@ const Programs = () => {
     return 'Confiance faible';
   };
 
+  const getSourceBadge = (source) => {
+    switch(source) {
+      case 'fastapi':
+        return { label: '🤖 IA', className: 'bg-purple-500/50' };
+      case 'local':
+        return { label: '📋 Local', className: 'bg-blue-500/50' };
+      case 'emergency_fallback':
+        return { label: '⚠️ Secours', className: 'bg-orange-500/50' };
+      default:
+        return { label: '📋 Standard', className: 'bg-gray-500/50' };
+    }
+  };
+
   const showExerciseDetails = (exercise) => {
     setSelectedExercise(exercise);
   };
@@ -172,13 +268,33 @@ const Programs = () => {
                 <h1 className="text-3xl font-display font-bold text-theme-primary">
                   💪 Programmes
                 </h1>
-                <p className="text-theme-secondary mt-1 text-sm">
+                <p className="text-theme-secondary mt-1 text-sm flex items-center gap-2 flex-wrap">
                   {activeProgram?.confidence_score && (
                     <span className="flex items-center gap-2">
                       <FaRobot className="text-[#57a1ce]" />
                       Programme généré par IA avec un score de confiance de {Math.round(activeProgram.confidence_score * 100)}%
                     </span>
                   )}
+                  <span className={`text-xs flex items-center gap-1 ${
+                    mlStatus.available ? 'text-green-500' : 'text-yellow-500'
+                  }`}>
+                    {mlStatus.checking ? (
+                      <>
+                        <FaSpinner className="animate-spin text-xs" />
+                        Vérification ML...
+                      </>
+                    ) : mlStatus.available ? (
+                      <>
+                        <FaWifi className="text-xs" />
+                        ML disponible
+                      </>
+                    ) : (
+                      <>
+                        <MdWifiOff className="text-xs" />
+                        Mode local
+                      </>
+                    )}
+                  </span>
                 </p>
               </div>
               <button
@@ -195,7 +311,6 @@ const Programs = () => {
               </div>
             ) : (
               <>
-                {/* ✅ Programme actif - CORRIGÉ avec gradient adaptatif */}
                 {activeProgram ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -219,15 +334,15 @@ const Programs = () => {
                           <span className="bg-white/20 px-3 py-1 rounded-full text-sm capitalize">
                             {activeProgram.goal}
                           </span>
-                          {activeProgram.source === 'fastapi' && (
-                            <span className="bg-purple-500/50 px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                              <FaRobot className="text-xs" /> IA
+                          {activeProgram.source && (
+                            <span className={`${getSourceBadge(activeProgram.source).className} px-3 py-1 rounded-full text-sm flex items-center gap-1`}>
+                              {getSourceBadge(activeProgram.source).label}
                             </span>
                           )}
-                          {activeProgram.confidence_score && (
-                            <span className="px-3 py-1 rounded-full text-sm flex items-center gap-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300">
+                          {activeProgram.confidence_score !== null && activeProgram.confidence_score !== undefined && (
+                            <span className={`text-xs flex items-center gap-1 ${getConfidenceColor(activeProgram.confidence_score)} bg-white/20 px-2 py-0.5 rounded-full`}>
                               {getConfidenceIcon(activeProgram.confidence_score)}
-                              {Math.round(activeProgram.confidence_score * 100)}%
+                              {Math.round(activeProgram.confidence_score * 100)}% confiance
                             </span>
                           )}
                         </div>
@@ -260,15 +375,33 @@ const Programs = () => {
                       <div className="mt-4 p-3 bg-white/10 dark:bg-white/5 rounded-lg border border-white/20 dark:border-white/10">
                         <div className="flex items-center gap-3">
                           <FaInfoCircle className="text-white/70 dark:text-white/50" />
-                          <p className="text-sm text-white/80 dark:text-gray-300">
-                            <span className="font-medium">Score de confiance: </span>
-                            {getConfidenceLabel(activeProgram.confidence_score)} ({Math.round(activeProgram.confidence_score * 100)}%)
+                          <div className="text-sm text-white/80 dark:text-gray-300">
+                            <span className="font-medium">
+                              📊 Score de confiance: 
+                            </span>
+                            {getConfidenceLabel(activeProgram.confidence_score)} 
+                            ({Math.round(activeProgram.confidence_score * 100)}%)
                             {activeProgram.explanation && (
                               <span className="block text-xs text-white/60 dark:text-gray-400 mt-1">
                                 {activeProgram.explanation}
                               </span>
                             )}
-                          </p>
+                            {activeProgram.source === 'fastapi' && (
+                              <span className="block text-xs text-green-300/80 dark:text-green-400/70 mt-1">
+                                ✅ Recommandation IA personnalisée
+                              </span>
+                            )}
+                            {activeProgram.source === 'local' && (
+                              <span className="block text-xs text-yellow-300/80 dark:text-yellow-400/70 mt-1">
+                                📋 Programme généré localement
+                              </span>
+                            )}
+                            {activeProgram.source === 'emergency_fallback' && (
+                              <span className="block text-xs text-orange-300/80 dark:text-orange-400/70 mt-1">
+                                ⚠️ Mode secours (service IA indisponible)
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -385,6 +518,7 @@ const Programs = () => {
                       {programs.slice(0, 5).map((program) => {
                         const Icon = getGoalIcon(program.goal);
                         const goalColor = getGoalColor(program.goal);
+                        const sourceBadge = getSourceBadge(program.source);
                         return (
                           <div
                             key={program.id}
@@ -419,9 +553,13 @@ const Programs = () => {
                                         {Math.round(program.confidence_score * 100)}% confiance
                                       </span>
                                     )}
-                                    {program.source === 'fastapi' && (
-                                      <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                        <FaRobot className="text-xs" /> IA
+                                    {program.source && (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                                        program.source === 'fastapi' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                                        program.source === 'local' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                                        'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                                      }`}>
+                                        {sourceBadge.label}
                                       </span>
                                     )}
                                   </h4>
@@ -459,7 +597,7 @@ const Programs = () => {
         </main>
       </div>
 
-      {/* Modal de génération - Dark Mode support */}
+      {/* Modal de génération */}
       {showGenerateModal && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
           <motion.div
@@ -481,6 +619,29 @@ const Programs = () => {
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
               Personnalisez votre programme selon vos objectifs et votre niveau
             </p>
+
+            <div className={`mb-4 p-3 rounded-lg border text-sm flex items-center gap-2 ${
+              mlStatus.available 
+                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' 
+                : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-400'
+            }`}>
+              {mlStatus.checking ? (
+                <>
+                  <FaSpinner className="animate-spin" />
+                  Vérification du service IA...
+                </>
+              ) : mlStatus.available ? (
+                <>
+                  <FaRobot className="text-green-500" />
+                  Service IA disponible - Programme personnalisé
+                </>
+              ) : (
+                <>
+                  <MdWifiOff />
+                  Service IA indisponible - Génération locale
+                </>
+              )}
+            </div>
 
             <form onSubmit={handleGenerateProgram}>
               <div className="space-y-6">
@@ -556,16 +717,6 @@ const Programs = () => {
                     {levels.find(l => l.value === formData.level)?.description}
                   </p>
                 </div>
-
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400">
-                    <FaRobot className="text-blue-500 dark:text-blue-400" />
-                    <span>Génération par intelligence artificielle</span>
-                  </div>
-                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                    Le programme sera personnalisé selon votre profil avec un score de confiance associé
-                  </p>
-                </div>
               </div>
 
               <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -576,7 +727,7 @@ const Programs = () => {
                 >
                   {generating ? (
                     <>
-                      <div className="spinner w-5 h-5 border-2 border-white/30 border-t-white inline-block mr-2"></div>
+                      <FaSpinner className="animate-spin inline mr-2" />
                       Génération...
                     </>
                   ) : (
@@ -596,7 +747,7 @@ const Programs = () => {
         </div>
       )}
 
-      {/* Modal Détails Exercice - Dark Mode support */}
+      {/* Modal Détails Exercice */}
       {selectedExercise && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
           <motion.div

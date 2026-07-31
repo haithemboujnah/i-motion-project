@@ -1,21 +1,49 @@
 const { pool } = require('../config/database');
 
 class Session {
-  // ✅ Créer une séance (pour Admin)
+  // ✅ Créer une séance (UNIQUE méthode)
   static async create(sessionData) {
-    const { coach_id, date, time, duration, type, status = 'available' } = sessionData;
-    
-    const query = `
-      INSERT INTO sessions (
-        coach_id, date, time, duration, type, status, created_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-      RETURNING *
-    `;
-    
-    const values = [coach_id, date, time, duration, type, status];
-    const result = await pool.query(query, values);
-    return result.rows[0];
+    try {
+      const { coach_id, adherent_id, date, time, duration, type, status = 'reserved' } = sessionData;
+      
+      console.log('📝 Création de la séance:', {
+        coach_id,
+        adherent_id,
+        date,
+        time,
+        duration: duration || 20,
+        type: type || 'EMS'
+      });
+      
+      // ✅ Si adherent_id est fourni, on le met dans la requête
+      let query = `
+        INSERT INTO sessions (
+          coach_id, date, time, duration, type, status, created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+        RETURNING *
+      `;
+      let values = [coach_id, date, time, duration || 20, type || 'EMS', status];
+      
+      // Si adherent_id est fourni, l'ajouter à la requête
+      if (adherent_id) {
+        query = `
+          INSERT INTO sessions (
+            coach_id, adherent_id, date, time, duration, type, status, created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+          RETURNING *
+        `;
+        values = [coach_id, adherent_id, date, time, duration || 20, type || 'EMS', status];
+      }
+      
+      const result = await pool.query(query, values);
+      console.log('✅ Séance créée:', result.rows[0]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Error creating session:', error);
+      throw error;
+    }
   }
 
   // ✅ Récupérer les séances disponibles par date
@@ -85,7 +113,7 @@ class Session {
     return result.rows;
   }
 
-  // ✅ Récupérer une séance par ID (CORRIGÉ)
+  // ✅ Récupérer une séance par ID
   static async findById(id) {
     try {
       console.log(`🔍 Recherche de la session ${id}...`);
@@ -141,26 +169,6 @@ class Session {
     }
   }
 
-  // ✅ Créer une séance (pour Admin) - CORRIGÉ
-  static async create(sessionData) {
-    const { adherent_id, coach_id, date, time, duration, type, status = 'available' } = sessionData;
-    
-    // Si adherent_id est fourni, la session est réservée directement
-    const finalStatus = adherent_id ? 'reserved' : status;
-    
-    const query = `
-      INSERT INTO sessions (
-        adherent_id, coach_id, date, time, duration, type, status, created_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-      RETURNING *
-    `;
-    
-    const values = [adherent_id || null, coach_id, date, time, duration, type, finalStatus];
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  }
-
   // ✅ Vérifier si un adhérent a déjà réservé une session
   static async findByAdherentAndSession(adherentId, sessionId) {
     const query = `
@@ -171,7 +179,7 @@ class Session {
     return result.rows[0];
   }
 
-  // ✅ Mettre à jour le statut d'une session (CORRIGÉ)
+  // ✅ Mettre à jour le statut d'une session
   static async updateStatus(id, status, adherentId = null) {
     try {
       console.log(`🔄 Mise à jour de la session ${id} en ${status}...`);
@@ -253,37 +261,7 @@ class Session {
     return result.rows;
   }
 
-  // ✅ Créer des séances pour une semaine (pour Admin)
-  static async createWeeklySessions(coachId, startDate, type = 'EMS') {
-    const sessions = [];
-    const days = ['Monday', 'Wednesday', 'Friday'];
-    const times = ['09:00:00', '10:00:00', '11:00:00', '14:00:00', '15:00:00', '16:00:00'];
-    
-    for (const day of days) {
-      for (const time of times) {
-        const date = new Date(startDate);
-        const dayMap = { 'Monday': 1, 'Wednesday': 3, 'Friday': 5 };
-        const currentDay = date.getDay();
-        const targetDay = dayMap[day];
-        const diff = targetDay - currentDay;
-        date.setDate(date.getDate() + diff);
-        
-        const session = await this.create({
-          coach_id: coachId,
-          date: date.toISOString().split('T')[0],
-          time: time,
-          duration: 60,
-          type: type,
-          status: 'available'
-        });
-        sessions.push(session);
-      }
-    }
-    
-    return sessions;
-  }
-
-  // ✅ Vérifier si une session existe et est disponible (NOUVEAU)
+  // ✅ Vérifier si une session existe et est disponible
   static async isAvailable(sessionId) {
     try {
       const query = `
@@ -296,18 +274,6 @@ class Session {
       console.error('Error checking session availability:', error);
       return null;
     }
-  }
-
-  static async markReminderSent(sessionId) {
-    const query = `
-      UPDATE sessions 
-      SET reminder_sent_manual = true,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-      RETURNING *
-    `;
-    const result = await pool.query(query, [sessionId]);
-    return result.rows[0];
   }
 }
 

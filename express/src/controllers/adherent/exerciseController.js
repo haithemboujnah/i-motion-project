@@ -1,13 +1,37 @@
 const Exercise = require('../../models/Exercise');
 
 class ExerciseController {
-  // ✅ Récupérer tous les exercices avec filtres
+  // ✅ Récupérer tous les exercices avec filtres (CORRIGÉ)
   static async getAll(req, res) {
     try {
       const { category, difficulty, muscle_group } = req.query;
       
+      // ✅ Mapping des catégories pour correspondre à la base
+      const categoryMapping = {
+        'ems': ['ems'],
+        'imodel': ['imodel'],
+        'ishape': ['ishape'],
+        'iface': ['iface'],
+        'cardio': ['ems', 'cardio'],
+        'musculation': ['imodel', 'musculation'],
+        'hiit': ['ems', 'hiit'],
+        'etirements': ['etirements'],
+        'all': null
+      };
+      
+      // Si category est 'all', ne pas filtrer
+      let filteredCategory = category;
+      if (category && category !== 'all') {
+        // Si la catégorie est un mapping, utiliser les valeurs correspondantes
+        if (categoryMapping[category]) {
+          // Pour 'cardio', on prend 'ems' et 'cardio'
+          // Pour 'musculation', on prend 'imodel' et 'musculation'
+          filteredCategory = categoryMapping[category];
+        }
+      }
+      
       const exercises = await Exercise.getAll({
-        category,
+        category: filteredCategory,
         difficulty,
         muscle_group
       });

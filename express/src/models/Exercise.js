@@ -1,16 +1,25 @@
 const { pool } = require('../config/database');
 
 class Exercise {
-  // ✅ Récupérer tous les exercices
+  // ✅ Récupérer tous les exercices (CORRIGÉ)
   static async getAll(filters = {}) {
     let query = 'SELECT * FROM exercises WHERE 1=1';
     const values = [];
     let index = 1;
 
+    // ✅ Gérer les filtres de catégorie (peut être un tableau)
     if (filters.category) {
-      query += ` AND category = $${index}`;
-      values.push(filters.category);
-      index++;
+      if (Array.isArray(filters.category)) {
+        // Si c'est un tableau, utiliser IN
+        const placeholders = filters.category.map((_, i) => `$${index + i}`).join(', ');
+        query += ` AND category IN (${placeholders})`;
+        values.push(...filters.category);
+        index += filters.category.length;
+      } else {
+        query += ` AND category = $${index}`;
+        values.push(filters.category);
+        index++;
+      }
     }
 
     if (filters.difficulty) {
@@ -40,26 +49,37 @@ class Exercise {
 
   // ✅ Recommander des exercices selon le programme
   static async getRecommendations(goal, level, limit = 10) {
-    let query = `
+    // ✅ Mapper les catégories selon l'objectif
+    let categories = [];
+    if (goal === 'prise_de_masse') {
+      categories = ['imodel', 'musculation'];
+    } else if (goal === 'perte_de_poids') {
+      categories = ['ems', 'cardio', 'hiit'];
+    } else if (goal === 'remise_en_forme') {
+      categories = ['ems', 'cardio', 'imodel'];
+    }
+    
+    // Si aucune catégorie trouvée, utiliser toutes
+    if (categories.length === 0) {
+      categories = ['ems', 'imodel', 'ishape', 'iface'];
+    }
+    
+    const placeholders = categories.map((_, i) => `$${i + 2}`).join(', ');
+    
+    const query = `
       SELECT * FROM exercises 
-      WHERE difficulty = $1 OR difficulty = 'debutant'
+      WHERE (difficulty = $1 OR difficulty = 'debutant')
+        AND category IN (${placeholders})
       ORDER BY 
         CASE 
           WHEN category = $2 THEN 1
-          WHEN category = 'cardio' THEN 2
-          ELSE 3
+          ELSE 2
         END,
         difficulty ASC
-      LIMIT $3
+      LIMIT $${categories.length + 2}
     `;
     
-    // Déterminer la catégorie principale selon l'objectif
-    let category = 'cardio';
-    if (goal === 'prise_de_masse') category = 'musculation';
-    else if (goal === 'perte_de_poids') category = 'cardio';
-    else if (goal === 'remise_en_forme') category = 'cardio';
-
-    const result = await pool.query(query, [level, category, limit]);
+    const result = await pool.query(query, [level, ...categories, limit]);
     return result.rows;
   }
 

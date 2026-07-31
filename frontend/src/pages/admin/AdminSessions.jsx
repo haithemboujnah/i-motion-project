@@ -22,6 +22,7 @@ const AdminSessions = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [sessionTypes, setSessionTypes] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -37,6 +38,23 @@ const AdminSessions = () => {
   const [adherents, setAdherents] = useState([]);
   const [coaches, setCoaches] = useState([]);
 
+  // ✅ Available session types (expandable)
+  const availableTypes = [
+    'EMS',
+    'I-Face',
+    'I-Model',
+    'I-Shape'
+  ];
+
+  // ✅ Status options
+  const statusOptions = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'reserved', label: 'Réservée' },
+    { value: 'confirmed', label: 'Confirmée' },
+    { value: 'completed', label: 'Terminée' },
+    { value: 'cancelled', label: 'Annulée' }
+  ];
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -51,11 +69,16 @@ const AdminSessions = () => {
         adminService.getUsers({ role: 'coach' })
       ]);
       
-      setSessions(sessionsRes.data.sessions || []);
-      setFilteredSessions(sessionsRes.data.sessions || []);
+      const sessionsData = sessionsRes.data.sessions || [];
+      setSessions(sessionsData);
+      setFilteredSessions(sessionsData);
       setStats(statsRes.data.stats || {});
       setAdherents(adherentsRes.data.users || []);
       setCoaches(coachesRes.data.users || []);
+      
+      // ✅ Extract unique session types from data
+      const uniqueTypes = [...new Set(sessionsData.map(s => s.type).filter(Boolean))];
+      setSessionTypes(uniqueTypes);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -119,13 +142,33 @@ const AdminSessions = () => {
     return labels[status] || status;
   };
 
-  // ✅ Ouvrir le modal de visualisation
+  // ✅ Get type icon
+  const getTypeIcon = (type) => {
+    const icons = {
+      'EMS': '⚡',
+      'I-Face': '👤',
+      'I-Model': '🏋️',
+      'I-Shape': '💎'
+    };
+    return icons[type] || '📅';
+  };
+
+  // ✅ Get type color
+  const getTypeColor = (type) => {
+    const colors = {
+      'EMS': '#8b5cf6',
+      'I-Face': '#ec4899',
+      'I-Model': '#22c55e',
+      'I-Shape': '#f59e0b'
+    };
+    return colors[type] || '#6b7280';
+  };
+
   const handleViewSession = (session) => {
     setSelectedSession(session);
     setShowViewModal(true);
   };
 
-  // ✅ Ouvrir le modal d'édition
   const handleEditClick = (session) => {
     setSelectedSession(session);
     setFormData({
@@ -139,7 +182,6 @@ const AdminSessions = () => {
     setShowEditModal(true);
   };
 
-  // ✅ Créer une séance
   const handleCreateSession = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -156,7 +198,6 @@ const AdminSessions = () => {
     }
   };
 
-  // ✅ Mettre à jour une séance
   const handleUpdateSession = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -174,7 +215,6 @@ const AdminSessions = () => {
     }
   };
 
-  // ✅ Supprimer une séance
   const handleDeleteSession = async (id) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette séance ?')) return;
     
@@ -258,26 +298,41 @@ const AdminSessions = () => {
                     className="input-logo pl-10"
                   />
                 </div>
+                
+                {/* ✅ Status Filter */}
                 <select
                   value={filterStatus}
                   onChange={(e) => handleFilterStatus(e.target.value)}
-                  className="input-logo w-40"
+                  className="input-logo w-48"
                 >
-                  <option value="all">Tous les statuts</option>
-                  <option value="reserved">Réservée</option>
-                  <option value="confirmed">Confirmée</option>
-                  <option value="completed">Terminée</option>
-                  <option value="cancelled">Annulée</option>
+                  {statusOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
+
+                {/* ✅ Type Filter - Dynamically generated from data */}
                 <select
                   value={filterType}
                   onChange={(e) => handleFilterType(e.target.value)}
-                  className="input-logo w-40"
+                  className="input-logo w-48"
                 >
-                  <option value="all">Tous les types</option>
-                  <option value="EMS">EMS</option>
-                  <option value="Cardio">Cardio</option>
-                  <option value="Musculation">Musculation</option>
+                  <option value="all">📋 Tous les types</option>
+                  {sessionTypes.length > 0 ? (
+                    sessionTypes.map(type => (
+                      <option key={type} value={type}>
+                        {getTypeIcon(type)} {type}
+                      </option>
+                    ))
+                  ) : (
+                    // Fallback: Show all available types if no data
+                    availableTypes.map(type => (
+                      <option key={type} value={type}>
+                        {getTypeIcon(type)} {type}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
@@ -319,8 +374,13 @@ const AdminSessions = () => {
                             <tr key={session.id} className="hover:bg-theme-hover transition">
                               <td className="px-6 py-4">
                                 <div>
-                                  <p className="font-medium text-theme-primary">{session.type || 'Séance'}</p>
-                                  <div className="flex items-center gap-2 text-sm text-theme-secondary">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{getTypeIcon(session.type)}</span>
+                                    <p className="font-medium text-theme-primary">
+                                      {session.type || 'Séance'}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-theme-secondary mt-1">
                                     <FaCalendar className="text-xs" />
                                     {new Date(session.date).toLocaleDateString('fr-FR')}
                                     <FaClock className="text-xs ml-2" />
@@ -488,11 +548,11 @@ const AdminSessions = () => {
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   >
-                    <option value="EMS">EMS</option>
-                    <option value="Cardio">Cardio</option>
-                    <option value="Musculation">Musculation</option>
-                    <option value="Yoga">Yoga</option>
-                    <option value="Pilates">Pilates</option>
+                    {availableTypes.map(type => (
+                      <option key={type} value={type}>
+                        {getTypeIcon(type)} {type}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -618,11 +678,11 @@ const AdminSessions = () => {
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   >
-                    <option value="EMS">EMS</option>
-                    <option value="Cardio">Cardio</option>
-                    <option value="Musculation">Musculation</option>
-                    <option value="Yoga">Yoga</option>
-                    <option value="Pilates">Pilates</option>
+                    {availableTypes.map(type => (
+                      <option key={type} value={type}>
+                        {getTypeIcon(type)} {type}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -683,59 +743,62 @@ const AdminSessions = () => {
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Type</p>
-                  <p className="font-semibold text-gray-800">{selectedSession.type || 'Séance'}</p>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Type</p>
+                  <p className="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                    <span className="text-lg">{getTypeIcon(selectedSession.type)}</span>
+                    {selectedSession.type || 'Séance'}
+                  </p>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Statut</p>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Statut</p>
                   <span className={`badge ${getStatusBadge(selectedSession.status)}`}>
                     {getStatusLabel(selectedSession.status)}
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500">Date et heure</p>
-                <p className="font-semibold text-gray-800">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Date et heure</p>
+                <p className="font-semibold text-gray-800 dark:text-white">
                   {new Date(selectedSession.date).toLocaleDateString('fr-FR')} à {selectedSession.time?.substring(0, 5)}
                 </p>
               </div>
 
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500">Durée</p>
-                <p className="font-semibold text-gray-800">{selectedSession.duration} minutes</p>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Durée</p>
+                <p className="font-semibold text-gray-800 dark:text-white">{selectedSession.duration} minutes</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Adhérent</p>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Adhérent</p>
                   {selectedSession.adherent_first_name ? (
                     <>
-                      <p className="font-semibold text-gray-800">
+                      <p className="font-semibold text-gray-800 dark:text-white">
                         {selectedSession.adherent_first_name} {selectedSession.adherent_last_name}
                       </p>
-                      <p className="text-xs text-gray-500">{selectedSession.adherent_email}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{selectedSession.adherent_email}</p>
                     </>
                   ) : (
-                    <p className="text-gray-400">Non assigné</p>
+                    <p className="text-gray-400 dark:text-gray-500">Non assigné</p>
                   )}
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">Coach</p>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Coach</p>
                   {selectedSession.coach_first_name ? (
-                    <p className="font-semibold text-gray-800">
+                    <p className="font-semibold text-gray-800 dark:text-white">
                       {selectedSession.coach_first_name} {selectedSession.coach_last_name}
                     </p>
                   ) : (
-                    <p className="text-gray-400">Non assigné</p>
+                    <p className="text-gray-400 dark:text-gray-500">Non assigné</p>
                   )}
                 </div>
               </div>
 
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500">Créé le</p>
-                <p className="font-semibold text-gray-800">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Créé le</p>
+                <p className="font-semibold text-gray-800 dark:text-white">
                   {new Date(selectedSession.created_at).toLocaleString('fr-FR')}
                 </p>
               </div>

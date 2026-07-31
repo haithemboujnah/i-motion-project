@@ -5,12 +5,8 @@ class Program {
   // ✅ Chercher un exercice dans la base de données
   static async findExerciseInDB(exerciseName, defaultDuration = 30) {
     try {
-      // Nettoyer le nom - enlever les parenthèses et les commentaires
-      let cleanName = exerciseName.split(' - ')[0].trim();
-      // Enlever les parenthèses et leur contenu
-      cleanName = cleanName.replace(/\([^)]*\)/g, '').trim();
-      
-      console.log(`🔍 Recherche de l'exercice: "${cleanName}" (original: "${exerciseName}")`);
+      // Nettoyer le nom
+      const cleanName = exerciseName.split(' - ')[0].trim();
       
       const query = `
         SELECT 
@@ -21,21 +17,18 @@ class Program {
         WHERE 
           name ILIKE $1 
           OR name ILIKE $2
-          OR name ILIKE $3
-          OR $4 ILIKE CONCAT('%', name, '%')
+          OR $3 ILIKE CONCAT('%', name, '%')
         LIMIT 1
       `;
       
       const result = await pool.query(query, [
         `%${cleanName}%`,
         `${cleanName}%`,
-        `%${cleanName}`,
         cleanName
       ]);
       
       if (result.rows.length > 0) {
         const exercise = result.rows[0];
-        console.log(`✅ Exercice trouvé: "${exercise.name}" (ID: ${exercise.id})`);
         return {
           id: exercise.id,
           name: exercise.name,
@@ -50,14 +43,7 @@ class Program {
         };
       }
       
-      // ✅ Si l'exercice n'existe pas, essayer de mapper avec mapExerciseName
-      const mappedExercise = mapExerciseName(exerciseName);
-      if (mappedExercise && mappedExercise !== cleanName) {
-        console.log(`🔄 Exercice mappé: "${exerciseName}" → "${mappedExercise}"`);
-        return await this.findExerciseInDB(mappedExercise, defaultDuration);
-      }
-      
-      // ✅ Si toujours pas trouvé, retourner un exercice par défaut
+      // ✅ Si l'exercice n'existe pas, retourner un exercice par défaut avec image
       console.warn(`⚠️ Exercice non trouvé dans la base: ${cleanName}`);
       return {
         id: null,
@@ -98,7 +84,6 @@ class Program {
       const dayExercises = [];
       
       for (const exerciseName of day.exercises) {
-        // ✅ Chercher l'exercice dans la base avec mapping
         const exercise = await this.findExerciseInDB(exerciseName);
         dayExercises.push(exercise);
       }
@@ -123,8 +108,8 @@ class Program {
       confidence_score, explanation, source
     } = programData;
     
-    const exercisesJson = JSON.stringify(exercises || []);
-    const scheduleJson = JSON.stringify(schedule || {});
+    const exercisesJson = JSON.stringify(exercises);
+    const scheduleJson = JSON.stringify(schedule);
     
     const query = `
       INSERT INTO programs (
@@ -161,112 +146,180 @@ class Program {
       'perte_de_poids': {
         'debutant': {
           name: 'Programme Perte de Poids - Débutant',
-          description: 'Programme adapté pour commencer votre perte de poids en douceur',
+          description: 'Programme adapté pour commencer votre perte de poids avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Cardio 30 min', 'Circuit training léger'] },
-            { day: 'Mercredi', exercises: ['Cardio 35 min', 'Musculation légère'] },
-            { day: 'Vendredi', exercises: ['Cardio 30 min', 'Étirements'] }
+            { day: 'Lundi', exercises: ['Squat EMS - 20 min', 'Gainage EMS - 15 min'] },
+            { day: 'Jeudi', exercises: ['Demi-squat EMS - 20 min', 'Bird Dog EMS - 15 min'] }
           ],
-          schedule: { frequency: '3 fois par semaine', duration: '45 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '45 minutes' }
         },
         'intermediaire': {
           name: 'Programme Perte de Poids - Intermédiaire',
-          description: 'Programme intensifié pour accélérer votre perte de poids',
+          description: 'Programme intensifié pour accélérer votre perte de poids avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Cardio 45 min', 'HIIT 15 min', 'Musculation'] },
-            { day: 'Mercredi', exercises: ['Cardio 40 min', 'Circuit training'] },
-            { day: 'Vendredi', exercises: ['Cardio 45 min', 'HIIT 20 min'] },
-            { day: 'Samedi', exercises: ['Cardio 30 min', 'Musculation'] }
+            { day: 'Lundi', exercises: ['Squat EMS - 25 min', 'Gainage EMS - 20 min', 'Mountain Climber EMS - 15 min'] },
+            { day: 'Jeudi', exercises: ['Fente EMS - 25 min', 'Crunch EMS - 20 min', 'Jump Squat EMS - 15 min'] }
           ],
-          schedule: { frequency: '4 fois par semaine', duration: '60 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '60 minutes' }
         },
         'avance': {
           name: 'Programme Perte de Poids - Avancé',
-          description: 'Programme intense pour une perte de poids maximale',
+          description: 'Programme intense pour une perte de poids maximale avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Cardio 60 min', 'HIIT 25 min', 'Musculation avancée'] },
-            { day: 'Mardi', exercises: ['Cardio 50 min', 'Circuit training intensif'] },
-            { day: 'Jeudi', exercises: ['Cardio 60 min', 'HIIT 30 min'] },
-            { day: 'Vendredi', exercises: ['Cardio 45 min', 'Musculation avancée'] },
-            { day: 'Samedi', exercises: ['Cardio 40 min', 'HIIT 20 min'] }
+            { day: 'Lundi', exercises: ['Jump Squat EMS - 25 min', 'Mountain Climber EMS - 20 min', 'Gainage EMS - 20 min'] },
+            { day: 'Jeudi', exercises: ['Squat EMS - 25 min', 'Russian Twist EMS - 20 min', 'Planche latérale EMS - 15 min'] }
           ],
-          schedule: { frequency: '5 fois par semaine', duration: '75 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '75 minutes' }
         }
       },
       'prise_de_masse': {
         'debutant': {
           name: 'Programme Prise de Masse - Débutant',
-          description: 'Commencez votre prise de masse musculaire',
+          description: 'Commencez votre prise de masse musculaire avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Musculation (haut du corps)', 'Cardio léger'] },
-            { day: 'Mercredi', exercises: ['Musculation (bas du corps)', 'Cardio léger'] },
-            { day: 'Vendredi', exercises: ['Musculation (corps entier)'] }
+            { day: 'Lundi', exercises: ['Squat EMS - 20 min', 'Gainage EMS - 15 min'] },
+            { day: 'Jeudi', exercises: ['Demi-squat EMS - 20 min', 'Pont fessier EMS - 15 min'] }
           ],
-          schedule: { frequency: '3 fois par semaine', duration: '50 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '50 minutes' }
         },
         'intermediaire': {
           name: 'Programme Prise de Masse - Intermédiaire',
-          description: 'Programme structuré pour une prise de masse efficace',
+          description: 'Programme structuré pour une prise de masse efficace avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Musculation (poitrine, dos)', 'Cardio modéré'] },
-            { day: 'Mardi', exercises: ['Musculation (jambes, abdos)'] },
-            { day: 'Jeudi', exercises: ['Musculation (épaules, bras)'] },
-            { day: 'Vendredi', exercises: ['Musculation (corps entier)', 'Cardio'] }
+            { day: 'Lundi', exercises: ['Squat EMS - 25 min', 'Pont fessier EMS - 20 min', 'Gainage EMS - 15 min'] },
+            { day: 'Jeudi', exercises: ['Fente EMS - 25 min', 'Crunch EMS - 20 min', 'Superman EMS - 15 min'] }
           ],
-          schedule: { frequency: '4 fois par semaine', duration: '60 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '60 minutes' }
         },
         'avance': {
           name: 'Programme Prise de Masse - Avancé',
-          description: 'Programme intensif pour une prise de masse maximale',
+          description: 'Programme intensif pour une prise de masse maximale avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Musculation (pecs, triceps)', 'Cardio 15 min'] },
-            { day: 'Mardi', exercises: ['Musculation (dos, biceps)', 'Cardio 15 min'] },
-            { day: 'Mercredi', exercises: ['Musculation (jambes, abdos)'] },
-            { day: 'Jeudi', exercises: ['Musculation (épaules, trapèzes)'] },
-            { day: 'Vendredi', exercises: ['Musculation (corps entier)'] },
-            { day: 'Samedi', exercises: ['Cardio 20 min', 'Étirements'] }
+            { day: 'Lundi', exercises: ['Jump Squat EMS - 25 min', 'Squat EMS - 20 min', 'Gainage EMS - 20 min'] },
+            { day: 'Jeudi', exercises: ['Fente EMS - 25 min', 'Planche latérale EMS - 20 min', 'Russian Twist EMS - 15 min'] }
           ],
-          schedule: { frequency: '5-6 fois par semaine', duration: '70 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '70 minutes' }
         }
       },
       'remise_en_forme': {
         'debutant': {
           name: 'Programme Remise en Forme - Débutant',
-          description: 'Reprenez le sport en douceur',
+          description: 'Améliorez votre condition physique avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Cardio 20 min', 'Renforcement musculaire léger'] },
-            { day: 'Mercredi', exercises: ['Cardio 25 min', 'Étirements'] },
-            { day: 'Vendredi', exercises: ['Cardio 20 min', 'Renforcement'] }
+            { day: 'Lundi', exercises: ['Squat EMS - 20 min', 'Gainage EMS - 15 min'] },
+            { day: 'Jeudi', exercises: ['Demi-squat EMS - 20 min', 'Bird Dog EMS - 15 min'] }
           ],
-          schedule: { frequency: '3 fois par semaine', duration: '40 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '40 minutes' }
         },
         'intermediaire': {
           name: 'Programme Remise en Forme - Intermédiaire',
-          description: 'Améliorez votre condition physique',
+          description: 'Améliorez votre condition physique globale avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Cardio 30 min', 'Circuit training'] },
-            { day: 'Mardi', exercises: ['Cardio 25 min', 'Renforcement'] },
-            { day: 'Jeudi', exercises: ['Cardio 35 min', 'Circuit training'] },
-            { day: 'Samedi', exercises: ['Cardio 20 min', 'Étirements'] }
+            { day: 'Lundi', exercises: ['Squat EMS - 25 min', 'Gainage EMS - 20 min', 'Mountain Climber EMS - 15 min'] },
+            { day: 'Jeudi', exercises: ['Fente EMS - 25 min', 'Crunch EMS - 20 min', 'Planche latérale EMS - 15 min'] }
           ],
-          schedule: { frequency: '4 fois par semaine', duration: '50 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '50 minutes' }
         },
         'avance': {
           name: 'Programme Remise en Forme - Avancé',
-          description: 'Programme complet pour une forme optimale',
+          description: 'Programme complet pour une forme optimale avec l\'EMS',
           exercises: [
-            { day: 'Lundi', exercises: ['Cardio 40 min', 'HIIT 15 min'] },
-            { day: 'Mardi', exercises: ['Cardio 30 min', 'Musculation'] },
-            { day: 'Mercredi', exercises: ['Cardio 35 min', 'Circuit training'] },
-            { day: 'Jeudi', exercises: ['Cardio 30 min', 'Musculation'] },
-            { day: 'Vendredi', exercises: ['Cardio 45 min', 'HIIT 20 min'] },
-            { day: 'Samedi', exercises: ['Cardio 25 min', 'Étirements'] }
+            { day: 'Lundi', exercises: ['Jump Squat EMS - 25 min', 'Mountain Climber EMS - 20 min', 'Gainage EMS - 15 min'] },
+            { day: 'Jeudi', exercises: ['Squat EMS - 25 min', 'Russian Twist EMS - 20 min', 'Planche latérale EMS - 15 min'] }
           ],
-          schedule: { frequency: '5-6 fois par semaine', duration: '60 minutes' }
+          schedule: { frequency: '2 fois par semaine', duration: '60 minutes' }
+        }
+      },
+      'modelage_raffermissement': {
+        'debutant': {
+          name: 'Programme Modelage & Raffermissement - Débutant',
+          description: 'Sculptez votre silhouette avec l\'EMS et I-Shape',
+          exercises: [
+            { day: 'Lundi', exercises: ['Drainage lymphatique - 25 min', 'Raffermissement des cuisses - 20 min'] },
+            { day: 'Jeudi', exercises: ['Raffermissement des fessiers - 25 min', 'Réduction de la cellulite - 20 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '50 minutes' }
+        },
+        'intermediaire': {
+          name: 'Programme Modelage & Raffermissement - Intermédiaire',
+          description: 'Programme complet pour sculpter votre silhouette',
+          exercises: [
+            { day: 'Lundi', exercises: ['Drainage lymphatique - 30 min', 'Raffermissement des cuisses - 25 min', 'Réduction de la cellulite - 20 min'] },
+            { day: 'Jeudi', exercises: ['Raffermissement des fessiers - 30 min', 'Raffermissement des bras - 25 min', 'Drainage lymphatique - 20 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '60 minutes' }
+        },
+        'avance': {
+          name: 'Programme Modelage & Raffermissement - Avancé',
+          description: 'Programme intensif pour une silhouette sculptée',
+          exercises: [
+            { day: 'Lundi', exercises: ['Drainage lymphatique - 35 min', 'Raffermissement des cuisses - 30 min', 'Réduction de la cellulite - 25 min'] },
+            { day: 'Jeudi', exercises: ['Raffermissement des fessiers - 35 min', 'Raffermissement des bras - 30 min', 'Drainage lymphatique - 25 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '70 minutes' }
+        }
+      },
+      'recuperation_bien_etre': {
+        'debutant': {
+          name: 'Programme Récupération & Bien-être - Débutant',
+          description: 'Retrouvez votre tonicité et soulagez les douleurs avec l\'EMS',
+          exercises: [
+            { day: 'Lundi', exercises: ['Renforcement abdominal - 25 min', 'Renforcement lombaire - 20 min'] },
+            { day: 'Jeudi', exercises: ['Renforcement fessiers - 25 min', 'Renforcement abdominal - 20 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '45 minutes' }
+        },
+        'intermediaire': {
+          name: 'Programme Récupération & Bien-être - Intermédiaire',
+          description: 'Programme complet pour votre bien-être avec I-Model',
+          exercises: [
+            { day: 'Lundi', exercises: ['Renforcement abdominal - 30 min', 'Renforcement lombaire - 25 min', 'Renforcement fessiers - 20 min'] },
+            { day: 'Jeudi', exercises: ['Renforcement fessiers - 30 min', 'Renforcement quadriceps - 25 min', 'Renforcement abdominal - 20 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '60 minutes' }
+        },
+        'avance': {
+          name: 'Programme Récupération & Bien-être - Avancé',
+          description: 'Programme intensif pour une récupération optimale',
+          exercises: [
+            { day: 'Lundi', exercises: ['Renforcement abdominal - 35 min', 'Renforcement lombaire - 30 min', 'Renforcement fessiers - 25 min'] },
+            { day: 'Jeudi', exercises: ['Renforcement quadriceps - 35 min', 'Renforcement abdominal - 30 min', 'Renforcement lombaire - 25 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '70 minutes' }
+        }
+      },
+      'lifting_naturel': {
+        'debutant': {
+          name: 'Programme Lifting Naturel & Anti-âge - Débutant',
+          description: 'Raffermissez votre visage avec I-Face',
+          exercises: [
+            { day: 'Lundi', exercises: ['Raffermissement du front - 25 min', 'Tonification des joues - 20 min'] },
+            { day: 'Jeudi', exercises: ['Raffermissement du cou - 25 min', 'Stimulation du collagène - 20 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '45 minutes' }
+        },
+        'intermediaire': {
+          name: 'Programme Lifting Naturel & Anti-âge - Intermédiaire',
+          description: 'Programme complet pour rajeunir votre peau',
+          exercises: [
+            { day: 'Lundi', exercises: ['Raffermissement du front - 30 min', 'Tonification des joues - 25 min', 'Stimulation du collagène - 20 min'] },
+            { day: 'Jeudi', exercises: ['Raffermissement du cou - 30 min', 'Stimulation du collagène - 25 min', 'Tonification des joues - 20 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '60 minutes' }
+        },
+        'avance': {
+          name: 'Programme Lifting Naturel & Anti-âge - Avancé',
+          description: 'Programme intensif pour un lifting naturel',
+          exercises: [
+            { day: 'Lundi', exercises: ['Stimulation du collagène - 35 min', 'Raffermissement du front - 30 min', 'Tonification des joues - 25 min'] },
+            { day: 'Jeudi', exercises: ['Raffermissement du cou - 35 min', 'Stimulation du collagène - 30 min', 'Raffermissement du front - 25 min'] }
+          ],
+          schedule: { frequency: '2 fois par semaine', duration: '70 minutes' }
         }
       }
     };
 
+    // ✅ Return the matching program or default to remise_en_forme / debutant
     return programs[goal]?.[level] || programs['remise_en_forme']['debutant'];
   }
 

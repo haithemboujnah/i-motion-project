@@ -3,12 +3,12 @@ import { motion } from 'framer-motion';
 import { 
   FaCalendar, FaClock, FaUser, FaPlus, FaSearch, 
   FaFilter, FaCheck, FaTimes, FaEye, FaEdit,
-  FaTrash, FaSpinner, FaQrcode, FaImage
+  FaTrash, FaSpinner, FaQrcode, FaImage,
+  FaBolt, FaWeight, FaHandSparkles, FaUserMd
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import CoachNavbar from '../../components/coach/CoachNavbar';
 import CoachSidebar from '../../components/coach/CoachSidebar';
-import QRImageScanner from '../../components/qr/QRImageScanner';
 import { coachService } from '../../services/coachService';
 import { authService } from '../../services/authService';
 import { formatDate, formatTime, formatSessionDate } from '../../utils/dateUtils';
@@ -26,7 +26,6 @@ const CoachSessions = () => {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [adherents, setAdherents] = useState([]);
@@ -35,11 +34,25 @@ const CoachSessions = () => {
     adherent_id: '',
     date: '',
     time: '',
-    duration: 60,
+    duration: 20,
     type: 'EMS'
   });
 
-  const sessionTypes = ['EMS', 'Cardio', 'Musculation', 'Yoga', 'Pilates', 'CrossFit'];
+  // ✅ Types de séances basés sur vos exercices
+  const sessionTypes = [
+    { value: 'EMS', label: 'EMS', icon: '⚡', color: '#57a1ce' },
+    { value: 'I-Model', label: 'I-Model', icon: '🏋️', color: '#22c55e' },
+    { value: 'I-Shape', label: 'I-Shape', icon: '💆', color: '#8b5cf6' },
+    { value: 'I-Face', label: 'I-Face', icon: '✨', color: '#ec4899' }
+  ];
+
+  const statusOptions = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'reserved', label: 'Réservée' },
+    { value: 'confirmed', label: 'Confirmée' },
+    { value: 'completed', label: 'Terminée' },
+    { value: 'cancelled', label: 'Annulée' }
+  ];
 
   useEffect(() => {
     fetchData();
@@ -118,16 +131,50 @@ const CoachSessions = () => {
     return labels[status] || status;
   };
 
+  // ✅ Créer une séance (CORRIGÉ)
   const handleCreateSession = async (e) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.adherent_id) {
+      toast.error('Veuillez sélectionner un adhérent');
+      return;
+    }
+    
+    if (!formData.date) {
+      toast.error('Veuillez sélectionner une date');
+      return;
+    }
+    
+    if (!formData.time) {
+      toast.error('Veuillez sélectionner une heure');
+      return;
+    }
+    
     setSubmitting(true);
     try {
-      await coachService.createSession(formData);
-      toast.success('Séance créée avec succès');
+      // ✅ Envoyer les données au service
+      const response = await coachService.createSession({
+        adherent_id: parseInt(formData.adherent_id),
+        date: formData.date,
+        time: formData.time,
+        duration: parseInt(formData.duration) || 20,
+        type: formData.type || 'EMS'
+      });
+      
+      console.log('✅ Séance créée:', response);
+      toast.success('✅ Séance créée avec succès !');
       setShowCreateModal(false);
-      setFormData({ adherent_id: '', date: '', time: '', duration: 60, type: 'EMS' });
-      fetchData();
+      setFormData({ 
+        adherent_id: '', 
+        date: '', 
+        time: '', 
+        duration: 20, 
+        type: 'EMS' 
+      });
+      fetchData(); // Recharger les données
     } catch (error) {
+      console.error('❌ Error creating session:', error);
       toast.error(error.response?.data?.error || 'Erreur lors de la création');
     } finally {
       setSubmitting(false);
@@ -161,7 +208,6 @@ const CoachSessions = () => {
     console.log('✅ Pointage effectué:', data);
     toast.success(`✅ ${data.adherent.first_name} ${data.adherent.last_name} pointé !`);
     fetchData();
-    // Fermer le scanner après 2 secondes
     setTimeout(() => {
       setShowQRScanner(false);
     }, 2000);
@@ -177,18 +223,10 @@ const CoachSessions = () => {
     return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
   };
 
-  const statusOptions = [
-    { value: 'all', label: 'Tous les statuts' },
-    { value: 'reserved', label: 'Réservée' },
-    { value: 'confirmed', label: 'Confirmée' },
-    { value: 'completed', label: 'Terminée' },
-    { value: 'cancelled', label: 'Annulée' }
-  ];
-
-  const typeOptions = [
-    { value: 'all', label: 'Tous les types' },
-    ...sessionTypes.map(type => ({ value: type, label: type }))
-  ];
+  // ✅ Rediriger vers la page de création
+  const handleCreateClick = () => {
+    navigate('/coach/sessions/create');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-primary">
@@ -209,16 +247,7 @@ const CoachSessions = () => {
               </div>
               <div className="mt-4 md:mt-0 flex gap-3">
                 <button
-                  onClick={() => {
-                    setSelectedSessionId(null);
-                    setShowQRScanner(true);
-                  }}
-                  className="btn-logo text-sm flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-                >
-                  <FaQrcode /> Scanner QR
-                </button>
-                <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={handleCreateClick}
                   className="btn-logo text-sm flex items-center gap-2"
                 >
                   <FaPlus /> Nouvelle séance
@@ -253,8 +282,9 @@ const CoachSessions = () => {
                   onChange={(e) => handleFilterType(e.target.value)}
                   className="px-4 py-2 border border-gray-200 dark:border-dark rounded-lg focus:ring-2 focus:ring-[#57a1ce] focus:border-transparent bg-white dark:bg-dark-secondary text-gray-900 dark:text-white"
                 >
-                  {typeOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option value="all">Tous les types</option>
+                  {sessionTypes.map(type => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
               </div>
@@ -289,9 +319,6 @@ const CoachSessions = () => {
                                 <span className={`badge ${getStatusBadge(session.status)}`}>
                                   {getStatusLabel(session.status)}
                                 </span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(session.status)}`}>
-                                  {session.status}
-                                </span>
                               </div>
                               <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
                                 <span className="flex items-center gap-1">
@@ -319,7 +346,7 @@ const CoachSessions = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 mt-4 md:mt-0 flex-wrap">
-                            {/* Actions pour le coach */}
+                            {/* Actions */}
                             {session.status === 'reserved' && (
                               <>
                                 <button
@@ -336,38 +363,16 @@ const CoachSessions = () => {
                                 >
                                   <FaTimes />
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedSessionId(session.id);
-                                    setShowQRScanner(true);
-                                  }}
-                                  className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
-                                  title="Scanner QR"
-                                >
-                                  <FaQrcode />
-                                </button>
                               </>
                             )}
                             {session.status === 'confirmed' && (
-                              <>
-                                <button
-                                  onClick={() => handleUpdateStatus(session.id, 'completed')}
-                                  className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition"
-                                  title="Terminer"
-                                >
-                                  <FaCheck />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedSessionId(session.id);
-                                    setShowQRScanner(true);
-                                  }}
-                                  className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
-                                  title="Scanner QR"
-                                >
-                                  <FaQrcode />
-                                </button>
-                              </>
+                              <button
+                                onClick={() => handleUpdateStatus(session.id, 'completed')}
+                                className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition"
+                                title="Terminer"
+                              >
+                                <FaCheck />
+                              </button>
                             )}
                             {session.status === 'completed' && (
                               <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
@@ -401,7 +406,7 @@ const CoachSessions = () => {
                     <FaCalendar className="text-6xl text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                     <p className="text-gray-500 dark:text-gray-400">Aucune séance trouvée</p>
                     <button
-                      onClick={() => setShowCreateModal(true)}
+                      onClick={handleCreateClick}
                       className="btn-logo text-sm inline-block mt-4"
                     >
                       <FaPlus className="inline mr-2" />
@@ -414,136 +419,6 @@ const CoachSessions = () => {
           </div>
         </main>
       </div>
-
-      {/* Modal Scanner QR Code */}
-      {showQRScanner && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-card rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-dark">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <FaQrcode className="text-purple-500" />
-                Scanner QR Code
-              </h2>
-              <button
-                onClick={() => setShowQRScanner(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-hover rounded-lg transition text-gray-500 dark:text-gray-400"
-              >
-                <FaTimes />
-              </button>
-            </div>
-            <div className="p-4">
-              <QRImageScanner 
-                sessionId={selectedSessionId}
-                onScanComplete={handleQRScanComplete}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Création */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-card rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-dark">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                <FaPlus className="inline mr-2 text-[#57a1ce]" />
-                Créer une séance
-              </h2>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-hover rounded-lg transition text-gray-500 dark:text-gray-400"
-              >
-                <FaTimes />
-              </button>
-            </div>
-            <form onSubmit={handleCreateSession} className="p-4 space-y-4">
-              <div>
-                <label className="label-custom">Adhérent *</label>
-                <select
-                  required
-                  className="input-logo"
-                  value={formData.adherent_id}
-                  onChange={(e) => setFormData({ ...formData, adherent_id: e.target.value })}
-                >
-                  <option value="">Sélectionner un adhérent</option>
-                  {adherents.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.first_name} {a.last_name} ({a.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label-custom">Date *</label>
-                <input
-                  type="date"
-                  required
-                  className="input-logo"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label-custom">Heure *</label>
-                <input
-                  type="time"
-                  required
-                  className="input-logo"
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label-custom">Durée (minutes)</label>
-                <input
-                  type="number"
-                  className="input-logo"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                  min="15"
-                  max="120"
-                />
-              </div>
-              <div>
-                <label className="label-custom">Type</label>
-                <select
-                  className="input-logo"
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                >
-                  {sessionTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-dark">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="btn-logo flex-1 disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <FaSpinner className="animate-spin inline mr-2" />
-                      Création...
-                    </>
-                  ) : (
-                    'Créer'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Annuler
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal Suppression */}
       {showDeleteModal && selectedSession && (

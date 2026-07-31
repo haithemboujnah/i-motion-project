@@ -2,6 +2,7 @@ const stripe = require('../config/stripe');
 const Subscription = require('../models/Subscription');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 class PaymentController {
   // ✅ Plans d'abonnement
@@ -9,52 +10,95 @@ class PaymentController {
     try {
       const plans = [
         {
-          id: 'monthly',
-          name: 'Abonnement Mensuel',
-          price: 29.99,
+          id: '1_seance',
+          name: '1 Séance',
+          price: 60.00,  // ✅ Updated from 25 to 60
           currency: 'eur',
-          interval: 'month',
+          interval: 'session',
+          sessions: 1,
+          type: 'sessions',
           features: [
-            'Accès illimité aux séances EMS',
+            '1 séance EMS',
+            'Accès à la salle',
+            'Suivi de performance',
+            'Valable 7 jours'
+          ]
+        },
+        {
+          id: '12_seances',
+          name: '12 Séances',
+          price: 600.00,  // ✅ Updated from 240 to 600
+          currency: 'eur',
+          interval: 'mois',
+          sessions: 12,
+          type: 'sessions',
+          features: [
+            '12 séances EMS',
+            'Accès illimité à la salle',
+            'Suivi des performances',
+            'Programmes personnalisés',
+            'Économie de 20%',
+            'Valable 3 mois'
+          ],
+          popular: true
+        },
+        {
+          id: '20_seances',
+          name: '20 Séances',
+          price: 950.00,  // ✅ Updated from 380 to 950
+          currency: 'eur',
+          interval: 'mois',
+          sessions: 20,
+          type: 'sessions',
+          features: [
+            '20 séances EMS',
+            'Accès illimité à la salle',
             'Suivi des performances',
             'Programmes personnalisés',
             'Gamification',
-            'Support prioritaire'
-          ],
-          stripePriceId: process.env.STRIPE_MONTHLY_PRICE_ID
+            'Économie de 25%',
+            'Valable 6 mois'
+          ]
         },
         {
-          id: 'quarterly',
-          name: 'Abonnement Trimestriel',
-          price: 79.99,
+          id: '1_an',
+          name: '1 An Illimité',
+          price: 2900.00,  // ✅ Updated from 1200 to 2900
           currency: 'eur',
-          interval: 'quarter',
+          interval: 'an',
+          sessions: null,
+          type: 'unlimited',
           features: [
-            'Accès illimité aux séances EMS',
+            'Séances illimitées',
+            'Accès illimité à la salle',
             'Suivi des performances',
             'Programmes personnalisés',
             'Gamification',
             'Support prioritaire',
-            'Économie de 10%'
-          ],
-          stripePriceId: process.env.STRIPE_QUARTERLY_PRICE_ID
+            'Économie de 30%',
+            'Valable 1 an'
+          ]
         },
         {
-          id: 'yearly',
-          name: 'Abonnement Annuel',
-          price: 299.99,
+          id: '2_ans',
+          name: '2 Ans Illimité',
+          price: 5400.00,  // ✅ Updated from 2100 to 5400
           currency: 'eur',
-          interval: 'year',
+          interval: 'an',
+          sessions: null,
+          type: 'unlimited',
           features: [
-            'Accès illimité aux séances EMS',
+            'Séances illimitées',
+            'Accès illimité à la salle',
             'Suivi des performances',
             'Programmes personnalisés',
             'Gamification',
             'Support prioritaire',
-            'Économie de 15%',
-            '1 mois offert'
+            'Économie de 40%',
+            'Valable 2 ans',
+            '2 mois offerts'
           ],
-          stripePriceId: process.env.STRIPE_YEARLY_PRICE_ID
+          popular: true
         }
       ];
       
@@ -71,16 +115,21 @@ class PaymentController {
     }
   }
 
+  // ✅ Updated createPaymentIntent with new prices
   static async createPaymentIntent(req, res) {
     try {
       const { planId } = req.body;
       const userId = req.user.userId;
       
-      // Plans avec prix en centimes
+      console.log(`📝 Création PaymentIntent: userId=${userId}, planId=${planId}`);
+      
+      // ✅ Updated prices in centimes EUR
       const planPrices = {
-        'monthly': { amount: 2999, interval: 'month', name: 'Mensuel' },
-        'quarterly': { amount: 7999, interval: 'quarter', name: 'Trimestriel' },
-        'yearly': { amount: 29999, interval: 'year', name: 'Annuel' }
+        '1_seance': { amount: 6000, name: '1 Séance' },      // 60.00 EUR
+        '12_seances': { amount: 60000, name: '12 Séances' },  // 600.00 EUR
+        '20_seances': { amount: 95000, name: '20 Séances' },  // 950.00 EUR
+        '1_an': { amount: 290000, name: '1 An Illimité' },    // 2900.00 EUR
+        '2_ans': { amount: 540000, name: '2 Ans Illimité' }   // 5400.00 EUR
       };
       
       const plan = planPrices[planId];
@@ -91,108 +140,317 @@ class PaymentController {
         });
       }
       
-      // Créer un PaymentIntent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: plan.amount,
-        currency: 'eur',
-        metadata: {
-          user_id: userId.toString(),
-          plan_id: planId,
-          plan_name: plan.name
-        },
-        description: `Abonnement ${plan.name} I-Motion`,
-      });
+      // ✅ Vérifier si Stripe est configuré
+      const isStripeConfigured = stripe && process.env.STRIPE_SECRET_KEY && 
+                                  process.env.STRIPE_SECRET_KEY.startsWith('sk_');
       
-      res.json({
-        success: true,
-        data: {
-          clientSecret: paymentIntent.client_secret,
-          paymentIntentId: paymentIntent.id,
-          amount: plan.amount / 100,
-          currency: 'eur'
-        }
-      });
+      if (!isStripeConfigured) {
+        console.warn('⚠️ Stripe non configuré, utilisation du mode test');
+        
+        // ✅ Mode test
+        const testIntentId = `pi_test_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const clientSecret = `${testIntentId}_secret_${Math.random().toString(36).substring(7)}`;
+        
+        return res.json({
+          success: true,
+          data: {
+            clientSecret: clientSecret,
+            paymentIntentId: testIntentId,
+            amount: plan.amount / 100,
+            currency: 'eur',
+            testMode: true,
+            planId: planId,
+            planName: plan.name
+          }
+        });
+      }
+      
+      // ✅ Mode réel Stripe avec EUR
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: plan.amount,
+          currency: 'eur',
+          metadata: {
+            user_id: userId.toString(),
+            plan_id: planId,
+            plan_name: plan.name
+          },
+          description: `Abonnement ${plan.name} I-Motion`,
+        });
+        
+        console.log(`✅ PaymentIntent créé: ${paymentIntent.id}`);
+        
+        res.json({
+          success: true,
+          data: {
+            clientSecret: paymentIntent.client_secret,
+            paymentIntentId: paymentIntent.id,
+            amount: plan.amount / 100,
+            currency: 'eur',
+            testMode: false,
+            planId: planId,
+            planName: plan.name
+          }
+        });
+      } catch (stripeError) {
+        console.error('❌ Stripe API Error:', stripeError.message);
+        
+        // ✅ Fallback en mode test
+        const fallbackId = `pi_fallback_${Date.now()}`;
+        res.json({
+          success: true,
+          data: {
+            paymentIntentId: fallbackId,
+            clientSecret: `${fallbackId}_secret_fallback_${Math.random().toString(36).substring(7)}`,
+            amount: plan.amount / 100,
+            currency: 'eur',
+            testMode: true,
+            planId: planId,
+            planName: plan.name,
+            note: 'Mode test activé suite à une erreur Stripe'
+          }
+        });
+      }
     } catch (error) {
-      console.error('Error creating payment intent:', error);
+      console.error('❌ Error creating payment intent:', error);
       res.status(500).json({
         success: false,
-        error: 'Erreur lors de la création du paiement'
+        error: 'Erreur lors de la création du paiement: ' + error.message
       });
     }
   }
 
+  // ✅ Updated confirmPayment with new prices
   static async confirmPayment(req, res) {
     try {
-      const { paymentIntentId } = req.body;
+      const { paymentIntentId, testMode } = req.body;
       const userId = req.user.userId;
       
-      // Récupérer le PaymentIntent
+      console.log(`📝 Confirmation paiement: ${paymentIntentId}, userId=${userId}, testMode=${testMode}`);
+      
+      // ✅ Mode test - Paiement simulé
+      if (testMode || (paymentIntentId && paymentIntentId.startsWith('pi_test_'))) {
+        console.log('🧪 Mode test - paiement simulé');
+        
+        let planId = '12_seances';
+        let amount = 600.00;  // ✅ Updated
+        let planName = '12 Séances';
+        let sessionsTotal = 12;
+        
+        // ✅ Déterminer le plan avec les nouveaux prix
+        if (paymentIntentId && paymentIntentId.includes('1_seance')) { 
+          planId = '1_seance'; 
+          amount = 60.00;  // ✅ Updated
+          planName = '1 Séance';
+          sessionsTotal = 1;
+        } else if (paymentIntentId && paymentIntentId.includes('12_seances')) { 
+          planId = '12_seances'; 
+          amount = 600.00;  // ✅ Updated
+          planName = '12 Séances';
+          sessionsTotal = 12;
+        } else if (paymentIntentId && paymentIntentId.includes('20_seances')) { 
+          planId = '20_seances'; 
+          amount = 950.00;  // ✅ Updated
+          planName = '20 Séances';
+          sessionsTotal = 20;
+        } else if (paymentIntentId && paymentIntentId.includes('1_an')) { 
+          planId = '1_an'; 
+          amount = 2900.00;  // ✅ Updated
+          planName = '1 An Illimité';
+          sessionsTotal = null;
+        } else if (paymentIntentId && paymentIntentId.includes('2_ans')) { 
+          planId = '2_ans'; 
+          amount = 5400.00;  // ✅ Updated
+          planName = '2 Ans Illimité';
+          sessionsTotal = null;
+        }
+        
+        const startDate = new Date();
+        const endDate = new Date();
+        
+        switch(planId) {
+          case '1_seance': 
+            endDate.setDate(endDate.getDate() + 7);
+            break;
+          case '12_seances': 
+            endDate.setMonth(endDate.getMonth() + 3);
+            break;
+          case '20_seances': 
+            endDate.setMonth(endDate.getMonth() + 6);
+            break;
+          case '1_an': 
+            endDate.setFullYear(endDate.getFullYear() + 1);
+            break;
+          case '2_ans': 
+            endDate.setFullYear(endDate.getFullYear() + 2);
+            break;
+          default: 
+            endDate.setMonth(endDate.getMonth() + 1);
+        }
+        
+        // ✅ Create subscription with new prices
+        const subscription = await Subscription.create({
+          user_id: userId,
+          stripe_subscription_id: paymentIntentId || `test_${Date.now()}`,
+          stripe_customer_id: null,
+          plan_type: planId,
+          plan_name: planName,
+          amount: amount,  // ✅ Updated price
+          currency: 'eur',
+          status: 'active',
+          sessions_total: sessionsTotal,
+          sessions_used: 0,
+          sessions_remaining: sessionsTotal,
+          start_date: startDate,
+          end_date: endDate
+        });
+        
+        // ✅ Create transaction with new price
+        const transaction = await Transaction.create({
+          user_id: userId,
+          subscription_id: subscription.id,
+          amount: amount,  // ✅ Updated price
+          currency: 'eur',
+          status: 'completed',
+          payment_method: 'test',
+          transaction_id: paymentIntentId || `test_${Date.now()}`,
+          metadata: { 
+            plan_id: planId, 
+            plan_name: planName,
+            sessions_total: sessionsTotal,
+            price: amount,  // ✅ Store the price
+            test_mode: true,
+            confirmed_at: new Date().toISOString()
+          }
+        });
+        
+        return res.json({
+          success: true,
+          message: '✅ Paiement test confirmé et abonnement activé',
+          data: { 
+            subscription,
+            transaction,
+            testMode: true,
+            sessions_remaining: sessionsTotal,
+            expires_at: endDate,
+            amount: amount  // ✅ Return the price
+          }
+        });
+      }
+      
+      // ✅ Mode réel - Même logique avec Stripe
+      if (!stripe) {
+        throw new Error('Stripe non configuré');
+      }
+      
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       
       if (paymentIntent.status !== 'succeeded') {
         return res.status(400).json({
           success: false,
-          error: 'Le paiement n\'a pas été confirmé'
+          error: `Le paiement n'a pas été confirmé. Statut: ${paymentIntent.status}`
         });
       }
       
-      const planId = paymentIntent.metadata.plan_id;
-      const amount = paymentIntent.amount / 100;
+      const planId = paymentIntent.metadata.plan_id || '12_seances';
+      const planName = paymentIntent.metadata.plan_name || '12 Séances';
+      const amount = paymentIntent.amount / 100;  // ✅ Updated price from Stripe
       
-      // Créer l'abonnement en base
+      // ✅ Determine sessions based on plan
+      let sessionsTotal = null;
+      switch(planId) {
+        case '1_seance': sessionsTotal = 1; break;
+        case '12_seances': sessionsTotal = 12; break;
+        case '20_seances': sessionsTotal = 20; break;
+        case '1_an': 
+        case '2_ans': sessionsTotal = null; break;
+      }
+      
       const startDate = new Date();
       const endDate = new Date();
       
       switch(planId) {
-        case 'monthly': endDate.setMonth(endDate.getMonth() + 1); break;
-        case 'quarterly': endDate.setMonth(endDate.getMonth() + 3); break;
-        case 'yearly': endDate.setFullYear(endDate.getFullYear() + 1); break;
+        case '1_seance': endDate.setDate(endDate.getDate() + 7); break;
+        case '12_seances': endDate.setMonth(endDate.getMonth() + 3); break;
+        case '20_seances': endDate.setMonth(endDate.getMonth() + 6); break;
+        case '1_an': endDate.setFullYear(endDate.getFullYear() + 1); break;
+        case '2_ans': endDate.setFullYear(endDate.getFullYear() + 2); break;
         default: endDate.setMonth(endDate.getMonth() + 1);
       }
       
-      // Créer l'abonnement
       const subscription = await Subscription.create({
         user_id: userId,
         stripe_subscription_id: paymentIntentId,
         stripe_customer_id: paymentIntent.customer || null,
         plan_type: planId,
+        plan_name: planName,
         amount: amount,
+        currency: 'eur',
         status: 'active',
+        sessions_total: sessionsTotal,
+        sessions_used: 0,
+        sessions_remaining: sessionsTotal,
         start_date: startDate,
         end_date: endDate
       });
       
-      // Créer la transaction
       await Transaction.create({
         user_id: userId,
         subscription_id: subscription.id,
         amount: amount,
+        currency: 'eur',
         status: 'completed',
         payment_method: 'stripe',
         transaction_id: paymentIntentId,
         metadata: {
           plan_id: planId,
+          plan_name: planName,
+          price: amount,
           payment_intent: paymentIntent
         }
       });
       
       res.json({
         success: true,
-        message: 'Paiement confirmé et abonnement activé',
-        data: { subscription }
+        message: '✅ Paiement confirmé et abonnement activé',
+        data: { 
+          subscription,
+          amount: amount
+        }
       });
     } catch (error) {
-      console.error('Error confirming payment:', error);
+      console.error('❌ Error confirming payment:', error);
       res.status(500).json({
         success: false,
-        error: 'Erreur lors de la confirmation du paiement'
+        error: 'Erreur lors de la confirmation du paiement: ' + error.message
       });
     }
   }
 
+  // ✅ Vérifier le statut du paiement (AJOUTÉ)
   static async checkPaymentStatus(req, res) {
     try {
       const { paymentIntentId } = req.params;
+      
+      console.log(`🔍 Vérification du statut paiement: ${paymentIntentId}`);
+      
+      // ✅ Mode test
+      if (paymentIntentId && paymentIntentId.startsWith('pi_test_')) {
+        return res.json({
+          success: true,
+          data: {
+            status: 'succeeded',
+            amount: 240.00,
+            currency: 'tnd',
+            testMode: true
+          }
+        });
+      }
+      
+      // ✅ Mode réel
+      if (!stripe) {
+        throw new Error('Stripe non configuré');
+      }
       
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       
@@ -205,158 +463,26 @@ class PaymentController {
         }
       });
     } catch (error) {
-      console.error('Error checking payment status:', error);
+      console.error('❌ Error checking payment status:', error);
       res.status(500).json({
         success: false,
-        error: 'Erreur lors de la vérification du paiement'
+        error: 'Erreur lors de la vérification du paiement: ' + error.message
       });
     }
   }
 
-  // ✅ Créer une session de paiement
-  static async createCheckoutSession(req, res) {
-    try {
-      const { planId, successUrl, cancelUrl } = req.body;
-      const userId = req.user.userId;
-      
-      console.log('📝 Creating checkout session for user:', userId, 'plan:', planId);
-      
-      // Récupérer l'utilisateur
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: 'Utilisateur non trouvé'
-        });
-      }
-      
-      // ✅ Créer un prix Stripe dynamiquement si non configuré
-      let finalPriceId;
-      
-      // Vérifier si les price IDs sont configurés
-      const priceIdMap = {
-        'monthly': process.env.STRIPE_MONTHLY_PRICE_ID,
-        'quarterly': process.env.STRIPE_QUARTERLY_PRICE_ID,
-        'yearly': process.env.STRIPE_YEARLY_PRICE_ID
-      };
-      
-      const configuredPriceId = priceIdMap[planId];
-      
-      if (configuredPriceId && configuredPriceId.startsWith('price_')) {
-        // Utiliser le price ID configuré
-        finalPriceId = configuredPriceId;
-        console.log(`✅ Using configured price: ${finalPriceId}`);
-      } else {
-        // ✅ Fallback: Créer un prix temporaire
-        console.log(`⚠️ No valid price ID for ${planId}, creating temporary price...`);
-        
-        const priceAmounts = {
-          'monthly': 2999,
-          'quarterly': 7999,
-          'yearly': 29999
-        };
-        
-        const intervals = {
-          'monthly': 'month',
-          'quarterly': 'month',
-          'yearly': 'year'
-        };
-        
-        const intervalCounts = {
-          'monthly': 1,
-          'quarterly': 3,
-          'yearly': 1
-        };
-        
-        try {
-          // Créer un produit
-          const product = await stripe.products.create({
-            name: `I-Motion ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-            description: `Plan d'abonnement ${planId}`,
-          });
-          
-          // Créer un prix
-          const price = await stripe.prices.create({
-            product: product.id,
-            unit_amount: priceAmounts[planId] || 2999,
-            currency: 'eur',
-            recurring: {
-              interval: intervals[planId] || 'month',
-              interval_count: intervalCounts[planId] || 1,
-            },
-          });
-          
-          finalPriceId = price.id;
-          console.log(`✅ Created temporary price: ${finalPriceId}`);
-        } catch (stripeError) {
-          console.error('❌ Error creating temporary price:', stripeError);
-          return res.status(500).json({
-            success: false,
-            error: 'Erreur de configuration Stripe. Veuillez contacter l\'administrateur.'
-          });
-        }
-      }
-      
-      // ✅ Créer la session de paiement
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price: finalPriceId,
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
-        success_url: successUrl || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/cancel`,
-        customer_email: user.email,
-        client_reference_id: userId.toString(),
-        metadata: {
-          user_id: userId.toString(),
-          plan_id: planId
-        },
-        subscription_data: {
-          metadata: {
-            user_id: userId.toString(),
-            plan_id: planId
-          }
-        }
-      });
-      
-      // Créer une transaction en attente
-      await Transaction.create({
-        user_id: userId,
-        amount: 0,
-        status: 'pending',
-        payment_method: 'stripe',
-        transaction_id: session.id,
-        metadata: { plan_id: planId }
-      });
-      
-      console.log('✅ Checkout session created:', session.id);
-      
-      res.json({
-        success: true,
-        data: {
-          sessionId: session.id,
-          url: session.url
-        }
-      });
-    } catch (error) {
-      console.error('❌ Error creating checkout session:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erreur lors de la création de la session de paiement: ' + error.message
-      });
-    }
-  }
-
-  // ✅ Webhook Stripe
+  // ✅ Webhook Stripe (AJOUTÉ)
   static async handleWebhook(req, res) {
     const sig = req.headers['stripe-signature'];
     let event;
     
     try {
+      // ✅ Vérifier si Stripe est configuré
+      if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
+        console.warn('⚠️ Webhook non configuré (mode test)');
+        return res.json({ received: true, testMode: true });
+      }
+      
       event = stripe.webhooks.constructEvent(
         req.body,
         sig,
@@ -368,30 +494,21 @@ class PaymentController {
     }
     
     try {
-      // Gérer les événements
       switch (event.type) {
         case 'checkout.session.completed':
-          await PaymentController.handleCheckoutCompleted(event.data.object);
+          console.log('✅ Checkout session completed:', event.data.object.id);
           break;
           
         case 'customer.subscription.created':
-          await PaymentController.handleSubscriptionCreated(event.data.object);
+          console.log('✅ Subscription created:', event.data.object.id);
           break;
           
         case 'customer.subscription.updated':
-          await PaymentController.handleSubscriptionUpdated(event.data.object);
+          console.log('✅ Subscription updated:', event.data.object.id);
           break;
           
         case 'customer.subscription.deleted':
-          await PaymentController.handleSubscriptionDeleted(event.data.object);
-          break;
-          
-        case 'invoice.payment_succeeded':
-          await PaymentController.handleInvoicePaid(event.data.object);
-          break;
-          
-        case 'invoice.payment_failed':
-          await PaymentController.handleInvoiceFailed(event.data.object);
+          console.log('✅ Subscription deleted:', event.data.object.id);
           break;
           
         default:
@@ -405,95 +522,13 @@ class PaymentController {
     }
   }
 
-  // ✅ Handlers des événements
-  static async handleCheckoutCompleted(session) {
-    const userId = parseInt(session.client_reference_id);
-    const planId = session.metadata?.plan_id;
-    
-    try {
-      // Récupérer l'abonnement Stripe
-      const subscription = await stripe.subscriptions.retrieve(session.subscription);
-      
-      // Créer l'abonnement en base
-      await Subscription.create({
-        user_id: userId,
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: session.customer,
-        plan_type: planId,
-        amount: subscription.items.data[0]?.price?.unit_amount / 100 || 0,
-        status: 'active',
-        start_date: new Date(subscription.current_period_start * 1000),
-        end_date: new Date(subscription.current_period_end * 1000)
-      });
-      
-      // Mettre à jour la transaction
-      const transactions = await Transaction.findByTransactionId(session.id);
-      if (transactions && transactions.length > 0) {
-        await Transaction.updateStatus(transactions[0].id, 'completed');
-      }
-    } catch (error) {
-      console.error('Error handling checkout completed:', error);
-    }
-  }
-
-  static async handleSubscriptionCreated(subscription) {
-    console.log(`✅ Subscription created: ${subscription.id}`);
-  }
-
-  static async handleSubscriptionUpdated(subscription) {
-    try {
-      const status = subscription.status === 'active' ? 'active' : 
-                     subscription.status === 'past_due' ? 'past_due' :
-                     subscription.status === 'canceled' ? 'cancelled' : 'inactive';
-      
-      await Subscription.updateStatus(subscription.id, status);
-    } catch (error) {
-      console.error('Error handling subscription updated:', error);
-    }
-  }
-
-  static async handleSubscriptionDeleted(subscription) {
-    try {
-      await Subscription.updateStatus(subscription.id, 'cancelled');
-    } catch (error) {
-      console.error('Error handling subscription deleted:', error);
-    }
-  }
-
-  static async handleInvoicePaid(invoice) {
-    try {
-      const subscriptionId = invoice.subscription;
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      
-      const userId = parseInt(subscription.metadata?.user_id);
-      
-      if (userId) {
-        await Transaction.create({
-          user_id: userId,
-          amount: invoice.total / 100,
-          status: 'completed',
-          payment_method: 'stripe',
-          transaction_id: invoice.id,
-          metadata: { invoice_id: invoice.id }
-        });
-      }
-    } catch (error) {
-      console.error('Error handling invoice paid:', error);
-    }
-  }
-
-  static async handleInvoiceFailed(invoice) {
-    console.log(`⚠️ Invoice failed: ${invoice.id}`);
-  }
-
-  // ✅ Récupérer l'abonnement de l'utilisateur
+  // ✅ Récupérer l'abonnement
   static async getSubscription(req, res) {
     try {
       const userId = req.user.userId;
       console.log(`🔍 Récupération de l'abonnement pour l'utilisateur ${userId}`);
       
       const subscription = await Subscription.findByUserId(userId);
-      console.log('📋 Abonnement trouvé:', subscription);
       
       res.json({
         success: true,
@@ -514,74 +549,37 @@ class PaymentController {
       const userId = req.user.userId;
       console.log(`🔄 Annulation de l'abonnement pour l'utilisateur ${userId}`);
       
-      // Récupérer l'abonnement actif
       const subscription = await Subscription.findByUserId(userId);
-      console.log('📋 Abonnement trouvé:', subscription);
       
       if (!subscription) {
-        console.log('❌ Aucun abonnement trouvé');
         return res.status(404).json({
           success: false,
           error: 'Aucun abonnement trouvé'
         });
       }
       
-      // Vérifier si l'abonnement est actif
       if (subscription.status !== 'active') {
-        console.log(`❌ Abonnement non actif (statut: ${subscription.status})`);
         return res.status(400).json({
           success: false,
           error: 'Cet abonnement n\'est pas actif'
         });
       }
       
-      // Mettre à jour le statut en base
       const updatedSubscription = await Subscription.updateStatus(
         subscription.id, 
-        'cancelling'
+        'cancelled'
       );
-      console.log('✅ Abonnement mis à jour en base:', updatedSubscription);
-      
-      // Si l'abonnement a un stripe_subscription_id, essayer d'annuler sur Stripe
-      if (subscription.stripe_subscription_id) {
-        try {
-          console.log(`🔄 Tentative d'annulation Stripe: ${subscription.stripe_subscription_id}`);
-          await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-            cancel_at_period_end: true
-          });
-          console.log('✅ Abonnement Stripe annulé avec succès');
-        } catch (stripeError) {
-          console.error('❌ Erreur Stripe (non bloquante):', stripeError.message);
-          // Continuer même si Stripe échoue
-        }
-      }
-      
-      // Créer une notification (optionnelle, ne pas bloquer)
-      try {
-        const Notification = require('../models/Notification');
-        await Notification.create({
-          user_id: userId,
-          title: '📅 Annulation d\'abonnement',
-          message: 'Votre abonnement sera annulé à la fin de la période en cours.',
-          type: 'subscription_cancelled',
-          link: '/subscription'
-        });
-        console.log('✅ Notification créée');
-      } catch (notifError) {
-        console.warn('⚠️ Erreur notification (non bloquante):', notifError.message);
-      }
       
       res.json({
         success: true,
-        message: 'L\'abonnement sera annulé à la fin de la période en cours',
+        message: 'Abonnement annulé avec succès',
         data: { subscription: updatedSubscription }
       });
     } catch (error) {
       console.error('❌ Erreur lors de l\'annulation:', error);
-      console.error('Stack trace:', error.stack);
       res.status(500).json({
         success: false,
-        error: 'Erreur lors de l\'annulation de l\'abonnement: ' + error.message
+        error: 'Erreur lors de l\'annulation de l\'abonnement'
       });
     }
   }
@@ -603,6 +601,262 @@ class PaymentController {
       res.status(500).json({
         success: false,
         error: 'Erreur lors de la récupération de l\'historique'
+      });
+    }
+  }
+
+  static async requestRenewal(req, res) {
+    try {
+      const userId = req.user.userId;
+      
+      console.log(`📝 Demande de renouvellement pour l'utilisateur ${userId}`);
+      
+      const subscription = await Subscription.findByUserId(userId);
+      
+      if (!subscription) {
+        return res.status(404).json({
+          success: false,
+          error: 'Aucun abonnement trouvé'
+        });
+      }
+      
+      if (subscription.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          error: 'Votre abonnement n\'est pas actif'
+        });
+      }
+      
+      // Vérifier si l'abonnement est expiré ou va expirer
+      const endDate = new Date(subscription.end_date);
+      const now = new Date();
+      
+      if (endDate > now) {
+        // L'abonnement n'est pas encore expiré
+        const daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+        
+        if (daysRemaining > 7) {
+          return res.status(400).json({
+            success: false,
+            error: `Vous pouvez demander un renouvellement à partir de 7 jours avant l'expiration (${daysRemaining} jours restants)`
+          });
+        }
+      }
+      
+      // Vérifier si une demande est déjà en cours
+      if (subscription.status === 'pending_renewal') {
+        return res.status(400).json({
+          success: false,
+          error: 'Une demande de renouvellement est déjà en attente'
+        });
+      }
+      
+      // Créer la demande de renouvellement
+      const updatedSubscription = await Subscription.requestRenewal(subscription.id);
+      
+      // Notifier l'admin
+      await Notification.create({
+        user_id: 1, // Admin
+        title: '📝 Demande de renouvellement',
+        message: `L'adhérent ${req.user.first_name} ${req.user.last_name} demande le renouvellement de son abonnement`,
+        type: 'renewal_request',
+        link: '/admin/renewals'
+      });
+      
+      // Notifier l'adhérent
+      await Notification.create({
+        user_id: userId,
+        title: '📝 Demande de renouvellement envoyée',
+        message: 'Votre demande de renouvellement d\'abonnement a été envoyée. Vous recevrez une confirmation dès que l\'administrateur l\'aura validée.',
+        type: 'renewal_requested',
+        link: '/subscription'
+      });
+      
+      res.json({
+        success: true,
+        message: 'Demande de renouvellement envoyée avec succès',
+        data: { subscription: updatedSubscription }
+      });
+    } catch (error) {
+      console.error('❌ Error requesting renewal:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la demande de renouvellement'
+      });
+    }
+  }
+
+  // ✅ Approuver le renouvellement (Admin)
+  static async approveRenewal(req, res) {
+    try {
+      const { subscriptionId } = req.params;
+      const { duration } = req.body; // 'monthly', 'quarterly', 'yearly'
+      
+      console.log(`✅ Approbation du renouvellement ${subscriptionId}`);
+      
+      const subscription = await Subscription.findById(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({
+          success: false,
+          error: 'Abonnement non trouvé'
+        });
+      }
+      
+      if (subscription.status !== 'pending_renewal') {
+        return res.status(400).json({
+          success: false,
+          error: 'Cette demande de renouvellement n\'est pas en attente'
+        });
+      }
+      
+      // Calculer la nouvelle date de fin
+      const newEndDate = new Date();
+      switch(duration) {
+        case 'monthly':
+          newEndDate.setMonth(newEndDate.getMonth() + 1);
+          break;
+        case 'quarterly':
+          newEndDate.setMonth(newEndDate.getMonth() + 3);
+          break;
+        case 'yearly':
+          newEndDate.setFullYear(newEndDate.getFullYear() + 1);
+          break;
+        default:
+          newEndDate.setMonth(newEndDate.getMonth() + 1);
+      }
+      
+      // Approuver le renouvellement
+      const updatedSubscription = await Subscription.approveRenewal(subscriptionId, newEndDate);
+      
+      // Créer une transaction pour le renouvellement
+      await Transaction.create({
+        user_id: subscription.user_id,
+        subscription_id: subscriptionId,
+        amount: subscription.amount,
+        currency: subscription.currency || 'eur',
+        status: 'completed',
+        payment_method: 'renewal',
+        transaction_id: `renewal_${Date.now()}`,
+        metadata: {
+          type: 'renewal',
+          previous_end_date: subscription.end_date,
+          new_end_date: newEndDate,
+          duration: duration,
+          approved_by: req.user.userId
+        }
+      });
+      
+      // Notifier l'adhérent
+      await Notification.create({
+        user_id: subscription.user_id,
+        title: '✅ Renouvellement approuvé',
+        message: `Votre abonnement a été renouvelé jusqu'au ${newEndDate.toLocaleDateString('fr-FR')}`,
+        type: 'renewal_approved',
+        link: '/subscription'
+      });
+      
+      res.json({
+        success: true,
+        message: 'Renouvellement approuvé avec succès',
+        data: { subscription: updatedSubscription }
+      });
+    } catch (error) {
+      console.error('❌ Error approving renewal:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de l\'approbation du renouvellement'
+      });
+    }
+  }
+
+  // ✅ Rejeter le renouvellement (Admin)
+  static async rejectRenewal(req, res) {
+    try {
+      const { subscriptionId } = req.params;
+      const { reason } = req.body;
+      
+      console.log(`❌ Rejet du renouvellement ${subscriptionId}`);
+      
+      const subscription = await Subscription.findById(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({
+          success: false,
+          error: 'Abonnement non trouvé'
+        });
+      }
+      
+      if (subscription.status !== 'pending_renewal') {
+        return res.status(400).json({
+          success: false,
+          error: 'Cette demande de renouvellement n\'est pas en attente'
+        });
+      }
+      
+      // Rejeter le renouvellement
+      const updatedSubscription = await Subscription.rejectRenewal(subscriptionId);
+      
+      // Notifier l'adhérent
+      await Notification.create({
+        user_id: subscription.user_id,
+        title: '❌ Renouvellement refusé',
+        message: `Votre demande de renouvellement a été refusée. Motif: ${reason || 'Non spécifié'}`,
+        type: 'renewal_rejected',
+        link: '/subscription'
+      });
+      
+      res.json({
+        success: true,
+        message: 'Renouvellement refusé',
+        data: { subscription: updatedSubscription }
+      });
+    } catch (error) {
+      console.error('❌ Error rejecting renewal:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors du rejet du renouvellement'
+      });
+    }
+  }
+
+  // ✅ Récupérer les demandes de renouvellement (Admin)
+  static async getPendingRenewals(req, res) {
+    try {
+      console.log('📋 Récupération des demandes de renouvellement en attente...');
+      
+      const renewals = await Subscription.getPendingRenewals();
+      
+      console.log(`✅ ${renewals.length} demandes trouvées`);
+      
+      res.json({
+        success: true,
+        data: { renewals }
+      });
+    } catch (error) {
+      console.error('❌ Error getting pending renewals:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération des demandes de renouvellement: ' + error.message
+      });
+    }
+  }
+
+  // ✅ Récupérer les abonnements expirant (Admin)
+  static async getExpiringSubscriptions(req, res) {
+    try {
+      const { days = 7 } = req.query;
+      const subscriptions = await Subscription.getExpiringSubscriptions(parseInt(days));
+      
+      res.json({
+        success: true,
+        data: { subscriptions }
+      });
+    } catch (error) {
+      console.error('❌ Error getting expiring subscriptions:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération des abonnements expirant'
       });
     }
   }

@@ -6,7 +6,8 @@ import {
   FaFilter, FaEye, FaSave, FaArrowLeft, FaSpinner,
   FaUserPlus, FaList, FaPlusCircle, FaMinusCircle,
   FaArrowRight, FaArrowLeft as FaArrowLeftIcon,
-  FaMagic, FaRobot, FaSync, FaImage, FaInfoCircle
+  FaMagic, FaRobot, FaSync, FaImage, FaInfoCircle,
+  FaFire, FaHeart, FaStar
 } from 'react-icons/fa';
 import { useTheme } from '../../context/ThemeContext';
 import AdminNavbar from '../../components/admin/AdminNavbar';
@@ -50,9 +51,12 @@ const AdminPrograms = () => {
   const daysOfWeek = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
   const goals = [
-    { value: 'perte_de_poids', label: 'Perte de poids', icon: '🎯', description: 'Brûlez des calories et perdez du poids' },
-    { value: 'prise_de_masse', label: 'Prise de masse', icon: '💪', description: 'Développez votre masse musculaire' },
-    { value: 'remise_en_forme', label: 'Remise en forme', icon: '🌟', description: 'Améliorez votre condition physique' }
+    { value: 'perte_de_poids', label: 'Perte de poids', icon: <FaFire />, color: '#ef4444', description: 'Brûlez des calories et perdez du poids' },
+    { value: 'prise_de_masse', label: 'Prise de masse', icon: <FaDumbbell />, color: '#22c55e', description: 'Développez votre masse musculaire' },
+    { value: 'remise_en_forme', label: 'Remise en forme', icon: <FaHeart />, color: '#57a1ce', description: 'Améliorez votre condition physique' },
+    { value: 'modelage_raffermissement', label: 'Modelage & Raffermissement', icon: <FaStar />, color: '#ec4899', description: 'Sculptez votre silhouette' },
+    { value: 'recuperation_bien_etre', label: 'Récupération & Bien-être', icon: <FaHeart />, color: '#8b5cf6', description: 'Retrouvez votre tonicité' },
+    { value: 'lifting_naturel', label: 'Lifting naturel & Anti-âge', icon: <FaStar />, color: '#f59e0b', description: 'Raffermissez votre visage' }
   ];
 
   const levels = [
@@ -659,8 +663,13 @@ const AdminPrograms = () => {
                                   <FaRobot className="text-xs" /> IA
                                 </span>
                               )}
-                              {program.confidence_score && (
-                                <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                              {program.confidence_score !== null && program.confidence_score !== undefined && program.confidence_score > 0 && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  program.confidence_score >= 0.8 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                  program.confidence_score >= 0.6 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                  program.confidence_score >= 0.4 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                                  'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                }`}>
                                   {Math.round(program.confidence_score * 100)}% confiance
                                 </span>
                               )}

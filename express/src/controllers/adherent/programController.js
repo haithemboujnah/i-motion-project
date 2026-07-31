@@ -28,9 +28,12 @@ class ProgramController {
         bmi = profile.weight / (heightInMeters * heightInMeters);
       }
       
-      // Appeler le service ML
+      // ✅ Appeler le service ML
       let mlData = null;
       let useML = false;
+      let programData = null;
+      let confidenceScore = 0;
+      let explanation = '';
       
       try {
         const mlResponse = await mlService.recommendProgram(
@@ -42,8 +45,8 @@ class ProgramController {
             weight: profile.weight,
             height: profile.height,
             bmi: bmi,
-            body_fat: null,
-            muscle_mass: null
+            body_fat: profile.body_fat,
+            muscle_mass: profile.muscle_mass
           }
         );
         
@@ -56,17 +59,13 @@ class ProgramController {
         console.warn('⚠️ Service ML indisponible, fallback vers la génération locale');
       }
       
-      // ✅ Générer le programme avec exercices ENRICHIS
-      let programData;
-      let confidenceScore = 0;
-      let explanation = '';
-      let enrichedExercises = [];
-      
+      // ✅ Générer le programme avec exercices détaillés
       if (useML && mlData) {
-        // === Utiliser la recommandation du service ML ===
+        // ✅ Utiliser les exercices du ML mais les enrichir avec la base
         const baseExercises = mlData.program.exercises || [];
         
-        // ✅ Enrichir chaque exercice avec les détails de la base
+        // ✅ Enrichir les exercices avec les détails de la base
+        const enrichedExercises = [];
         for (const day of baseExercises) {
           const enrichedDay = {
             day: day.day,
@@ -93,7 +92,7 @@ class ProgramController {
         confidenceScore = mlData.confidence_score || 0.7;
         explanation = mlData.explanation || 'Programme généré par IA';
       } else {
-        // === Fallback: Génération locale avec exerciseMapping ===
+        // ✅ Fallback: Génération locale avec exerciseMapping
         const localProgram = await Program.generateProgramWithDBExercises(profile, userGoal, userLevel);
         programData = {
           name: localProgram.name,
@@ -108,7 +107,7 @@ class ProgramController {
         console.log('🔄 Fallback: Programme généré localement');
       }
       
-      // ✅ Créer le programme dans la base avec les exercices enrichis
+      // ✅ Créer le programme dans la base
       const program = await Program.createWithExercises({
         adherent_id: adherentId,
         name: programData.name,
@@ -116,19 +115,19 @@ class ProgramController {
         goal: programData.goal,
         level: programData.level,
         duration_weeks: 8,
-        exercises: programData.exercises, // ✅ Maintenant ce sont des objets avec images
+        exercises: programData.exercises,
         schedule: programData.schedule,
         confidence_score: confidenceScore,
         explanation: explanation,
         source: useML ? 'fastapi' : 'local'
       });
       
-      // Gamification
+      // ✅ Gamification
       const points = useML ? 25 : 20;
       await Gamification.addPoints(adherentId, points, `Génération de programme ${useML ? '(IA)' : '(local)'}`);
       await Gamification.checkAndAwardBadges(adherentId);
       
-      // Notification
+      // ✅ Notification
       const title = useML ? '🤖 Programme IA généré' : '💪 Programme généré';
       const message = useML 
         ? `Votre programme "${programData.name}" est prêt ! (Confiance: ${Math.round(confidenceScore * 100)}%)`
@@ -155,7 +154,7 @@ class ProgramController {
     } catch (error) {
       console.error('Error generating program:', error);
       
-      // Fallback ultime
+      // ✅ Fallback ultime
       try {
         const profile = await Profile.findByUserId(req.user.userId);
         if (!profile) {

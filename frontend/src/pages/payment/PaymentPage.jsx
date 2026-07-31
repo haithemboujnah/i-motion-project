@@ -139,7 +139,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-700">Vous allez payer</p>
-            <p className="text-2xl font-bold text-blue-600">{planPrice}€</p>
+            <p className="text-2xl font-bold text-blue-600">{planPrice}DT</p>
             <p className="text-xs text-gray-500">pour l'abonnement {planName}</p>
           </div>
           <div className="p-3 bg-blue-100 rounded-full">
@@ -188,7 +188,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
           ) : (
             <>
               <FaLock />
-              Payer {planPrice}€
+              Payer {planPrice}DT
             </>
           )}
         </button>
@@ -317,7 +317,7 @@ const PaymentPage = () => {
                       <div className="text-center mb-4">
                         <h3 className="text-xl font-bold text-gray-800">{plan.name}</h3>
                         <div className="mt-2">
-                          <span className="text-4xl font-bold text-gray-900">{plan.price}€</span>
+                          <span className="text-4xl font-bold text-gray-900">{plan.price} DT</span>
                           <span className="text-gray-500"> / {plan.interval}</span>
                         </div>
                       </div>

@@ -4,7 +4,7 @@ import {
   FaHome, FaUsers, FaDumbbell, FaTrophy,
   FaChartLine, FaEye, FaBell, FaUser,
   FaCog, FaSignOutAlt, FaShieldAlt, FaChartBar,
-  FaChevronDown, FaChevronRight, FaBrain,
+  FaChevronDown, FaChevronRight, FaBrain, FaSyncAlt,
   FaArrowLeft, FaCalendar, FaBook, FaCalendarAlt,
   FaRunning, FaFire, FaStar, FaRobot, FaComments
 } from 'react-icons/fa';
@@ -114,6 +114,12 @@ const AdminSidebar = () => {
       label: 'Feedback',
       description: 'Gestion des avis',
       badge:'IA'
+    },
+    { 
+      path: '/admin/renewals', 
+      icon: FaSyncAlt, 
+      label: 'Renewals',
+      description: 'Gestion des renouvellements',
     },
     { 
       path: '/admin/settings', 

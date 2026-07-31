@@ -149,13 +149,13 @@ const PaymentHistory = () => {
 
   const formatAmount = (amount) => {
     if (amount === undefined || amount === null || isNaN(amount)) {
-      return '0,00 €';
+      return '0,00 DT';
     }
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (isNaN(numAmount)) {
-      return '0,00 €';
+      return '0,00 DT';
     }
-    return `${numAmount.toFixed(2)} €`;
+    return `${numAmount.toFixed(2)} DT`;
   };
 
   const getSafeAmount = (transaction) => {

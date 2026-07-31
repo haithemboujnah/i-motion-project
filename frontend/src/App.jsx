@@ -42,6 +42,7 @@ import AdminNotifications from './pages/admin/AdminNotifications';
 import AdminSessions from './pages/admin/AdminSessions';
 import AdminChurn from './pages/admin/AdminChurn';
 import AdminAdherentDetail from './pages/admin/AdminAdherentDetail';
+import AdminRenewals from './pages/admin/AdminRenewals';
 
 // Components
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -132,7 +133,9 @@ const App = () => {
             <Route path="/admin/churn" element={<ProtectedRoute allowedRoles={['admin']}><AdminChurn /></ProtectedRoute>} />
             <Route path="/admin/adherents/:id" element={<ProtectedRoute allowedRoles={['admin']}><AdminAdherentDetail /></ProtectedRoute>} />
             <Route path="/admin/feedback" element={<ProtectedRoute allowedRoles={['admin']}><AdminFeedback /></ProtectedRoute>} />
-            <Route path="/admin/bi-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><BIDashboard  /></ProtectedRoute>} />
+            <Route path="/admin/bi-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><BIDashboard /></ProtectedRoute>} />
+            <Route path="/admin/renewals" element={<ProtectedRoute allowedRoles={['admin']}><AdminRenewals /></ProtectedRoute>} />
+            
             {/* Routes Paiement */}
             <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
             <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
