@@ -1,0 +1,85 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.*
+*.env
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+build/
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# ML Models - EXCLURE TOUS LES MODÈLES
+*.pkl
+*.h5
+*.joblib
+*.pickle
+*.onnx
+*.pb
+*.tflite
+*.keras
+*.model
+*.sav
+*.data
+*.index
+ml-service/models/*.pkl
+ml-service/models/*.h5
+ml-service/models/*.joblib
+!ml-service/models/.gitkeep
+
+# Jupyter Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+*.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads
+uploads/
+media/
+static/uploads/
+static/media/
+
+# Coverage
+coverage/
+.coverage
+
+# Docker
+*.dockerignore
+.docker/

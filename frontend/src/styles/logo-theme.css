@@ -1,0 +1,382 @@
+:root {
+  /* Couleurs principales */
+  --logo-blue: #57a1ce;
+  --logo-blue-light: #7bb8de;
+  --logo-blue-dark: #3d7fa8;
+  --logo-gray: #afadb3;
+  --logo-gray-light: #c9c8cc;
+  --logo-gray-dark: #8a888e;
+  
+  /* Dégradés */
+  --gradient-primary: linear-gradient(135deg, #57a1ce 0%, #afadb3 100%);
+  --gradient-blue: linear-gradient(135deg, #57a1ce 0%, #3d7fa8 100%);
+  --gradient-gray: linear-gradient(135deg, #afadb3 0%, #8a888e 100%);
+  
+  /* Ombres */
+  --shadow-logo: 0 4px 20px rgba(87, 161, 206, 0.3);
+  --shadow-logo-lg: 0 8px 40px rgba(87, 161, 206, 0.25);
+  --shadow-gray: 0 4px 20px rgba(175, 173, 179, 0.3);
+}
+
+/* ============================================
+   CLASSES UTILITAIRES PERSONNALISÉES
+   ============================================ */
+
+/* Couleurs de fond */
+.bg-logo-blue { background-color: var(--logo-blue); }
+.bg-logo-blue-light { background-color: var(--logo-blue-light); }
+.bg-logo-blue-dark { background-color: var(--logo-blue-dark); }
+.bg-logo-gray { background-color: var(--logo-gray); }
+.bg-logo-gray-light { background-color: var(--logo-gray-light); }
+.bg-logo-gray-dark { background-color: var(--logo-gray-dark); }
+
+/* Gradients */
+.bg-logo-gradient {
+  background: var(--gradient-primary);
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+.bg-logo-gradient-blue {
+  background: var(--gradient-blue);
+}
+
+.bg-logo-gradient-gray {
+  background: var(--gradient-gray);
+}
+
+/* Couleurs de texte */
+.text-logo-blue { color: var(--logo-blue); }
+.text-logo-blue-light { color: var(--logo-blue-light); }
+.text-logo-gray { color: var(--logo-gray); }
+.text-logo-gray-light { color: var(--logo-gray-light); }
+
+.text-logo-gradient {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Bordures */
+.border-logo-blue { border-color: var(--logo-blue); }
+.border-logo-gray { border-color: var(--logo-gray); }
+
+/* Ombres */
+.shadow-logo { box-shadow: var(--shadow-logo); }
+.shadow-logo-lg { box-shadow: var(--shadow-logo-lg); }
+.shadow-gray { box-shadow: var(--shadow-gray); }
+
+/* Hover effects */
+.hover-logo-glow:hover {
+  box-shadow: var(--shadow-logo-lg);
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-logo-scale:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+.hover-logo-bg:hover {
+  background: var(--gradient-primary);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+/* ============================================
+   COMPOSANTS SPÉCIFIQUES
+   ============================================ */
+
+/* Bouton principal */
+.btn-logo {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 12px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-logo);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-logo:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-logo-lg);
+}
+
+.btn-logo:active {
+  transform: translateY(0);
+}
+
+.btn-logo-outline {
+  background: transparent;
+  color: var(--logo-blue);
+  padding: 12px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  border: 2px solid var(--logo-blue);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-logo-outline:hover {
+  background: var(--gradient-primary);
+  color: white;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-logo);
+}
+
+/* Card avec thème logo */
+.card-logo {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(175, 173, 179, 0.15);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(175, 173, 179, 0.1);
+}
+
+.card-logo:hover {
+  box-shadow: var(--shadow-logo-lg);
+  transform: translateY(-4px);
+  border-color: var(--logo-blue);
+}
+
+.card-logo-gradient {
+  background: var(--gradient-primary);
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+  box-shadow: var(--shadow-logo);
+}
+
+/* Input avec thème logo */
+.input-logo {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.input-logo:focus {
+  outline: none;
+  border-color: var(--logo-blue);
+  box-shadow: 0 0 0 4px rgba(87, 161, 206, 0.1);
+}
+
+.input-logo-error {
+  border-color: #ef4444;
+}
+
+.input-logo-error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+
+/* Badge */
+.badge-logo {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-logo-blue {
+  background: rgba(87, 161, 206, 0.15);
+  color: var(--logo-blue);
+}
+
+.badge-logo-gray {
+  background: rgba(175, 173, 179, 0.15);
+  color: var(--logo-gray-dark);
+}
+
+.badge-logo-gradient {
+  background: var(--gradient-primary);
+  color: white;
+}
+
+/* Avatar avec thème */
+.avatar-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 1.25rem;
+  box-shadow: var(--shadow-logo);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulse-logo {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(87, 161, 206, 0.4);
+  }
+  50% { 
+    box-shadow: 0 0 0 20px rgba(87, 161, 206, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-pulse-logo {
+  animation: pulse-logo 2s infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--logo-gray-light) 25%,
+    var(--logo-blue-light) 50%,
+    var(--logo-gray-light) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* ============================================
+   LAYOUTS
+   ============================================ */
+
+/* Page d'authentification */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8edf2 100%);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(87, 161, 206, 0.05) 0%, transparent 70%);
+  animation: float 6s ease-in-out infinite;
+}
+
+.auth-container::after {
+  content: '';
+  position: absolute;
+  bottom: -50%;
+  left: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(175, 173, 179, 0.05) 0%, transparent 70%);
+  animation: float 6s ease-in-out infinite reverse;
+}
+
+.auth-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+/* Navigation */
+.nav-logo {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(175, 173, 179, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Dashboard cards */
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(175, 173, 179, 0.1);
+  transition: all 0.3s ease;
+  border-left: 4px solid var(--logo-blue);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-logo-lg);
+}
+
+.stat-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(87, 161, 206, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--logo-blue);
+  font-size: 1.5rem;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 24px;
+  }
+  
+  .btn-logo,
+  .btn-logo-outline {
+    padding: 10px 24px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .auth-card {
+    padding: 48px;
+  }
+}
