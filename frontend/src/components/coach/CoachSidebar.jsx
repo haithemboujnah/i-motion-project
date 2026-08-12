@@ -5,7 +5,7 @@ import {
   FaHome, FaUsers, FaCalendar, FaChartLine,
   FaBell, FaUser, FaDumbbell,
   FaExclamationTriangle, FaTrophy,
-  FaBookOpen, FaRunning, FaFire, FaHistory,
+  FaClipboardList, FaFire, FaHistory,
   FaStar, FaArrowLeft, FaCrown, FaRobot
 } from 'react-icons/fa';
 import { coachService } from '../../services/coachService';
@@ -68,9 +68,7 @@ const CoachSidebar = () => {
       description: 'Adhérents à risque', 
       iconColor: '#ef4444', 
       badge: atRiskCount > 0 ? atRiskCount : null, 
-      badgeColor: atRiskCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-gray-300',
-      badgeIcon: 'AI',
-      badgeIconColor: 'bg-red-500'
+      badgeColor: atRiskCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-gray-300'
     },
     { 
       path: '/coach/sessions', 
@@ -88,22 +86,32 @@ const CoachSidebar = () => {
     },
     { 
       path: '/coach/exercises', 
-      icon: FaBookOpen, 
+      icon: FaClipboardList, 
       label: 'Exercices', 
-      description: 'Bibliothèque', 
+      description: 'Bibliothèque d\'exercices', 
       iconColor: '#ec4899' 
     },
     { 
       path: '/coach/attendance-history', 
       icon: FaHistory, 
       label: 'Historique pointages',
-      description: 'Voir les pointages'
+      description: 'Suivi des présences',
+      iconColor: '#8b5cf6'
+    },
+    { 
+      path: '/coach/subscriptions', 
+      icon: FaCrown, 
+      label: 'Abonnements',
+      description: 'Gestion des abonnements',
+      iconColor: '#f59e0b',
+      badge: stats.totalAdherents,
+      badgeColor: 'bg-green-500'
     },
     { 
       path: '/coach/notifications', 
       icon: FaBell, 
       label: 'Notifications', 
-      description: 'Alertes', 
+      description: 'Alertes et messages', 
       iconColor: '#3b82f6' 
     },
     { 

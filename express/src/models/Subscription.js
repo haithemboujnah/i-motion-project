@@ -4,24 +4,24 @@ class Subscription {
   // ✅ Créer un abonnement
   static async create(subscriptionData) {
     const { 
-      user_id, stripe_subscription_id, stripe_customer_id,
+      user_id, coach_id, stripe_subscription_id, stripe_customer_id,
       plan_type, plan_name, amount, currency, status, 
       start_date, end_date, sessions_total, sessions_used, sessions_remaining
     } = subscriptionData;
     
     const query = `
       INSERT INTO subscriptions (
-        user_id, stripe_subscription_id, stripe_customer_id,
+        user_id, coach_id, stripe_subscription_id, stripe_customer_id,
         plan_type, plan_name, amount, currency, status, 
         start_date, end_date, sessions_total, sessions_used, sessions_remaining,
         renewal_count, created_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
       RETURNING *
     `;
     
     const values = [
-      user_id, stripe_subscription_id || null, stripe_customer_id || null,
+      user_id, coach_id || null, stripe_subscription_id || null, stripe_customer_id || null,
       plan_type, plan_name || plan_type, amount, currency || 'eur', status || 'active',
       start_date, end_date, sessions_total || null, sessions_used || 0, sessions_remaining || sessions_total || null,
       0
@@ -34,8 +34,17 @@ class Subscription {
   // ✅ Récupérer un abonnement par ID
   static async findById(id) {
     const query = `
-      SELECT * FROM subscriptions 
-      WHERE id = $1
+      SELECT 
+        s.*,
+        u.first_name as user_first_name,
+        u.last_name as user_last_name,
+        c.first_name as coach_first_name,
+        c.last_name as coach_last_name,
+        c.email as coach_email
+      FROM subscriptions s
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN users c ON s.coach_id = c.id
+      WHERE s.id = $1
     `;
     const result = await pool.query(query, [id]);
     return result.rows[0];
@@ -43,17 +52,85 @@ class Subscription {
 
   // ✅ Récupérer l'abonnement d'un utilisateur
   static async findByUserId(userId) {
-    console.log(`🔍 Recherche d'abonnement pour l'utilisateur ${userId}`);
-    
     const query = `
-      SELECT * FROM subscriptions 
-      WHERE user_id = $1 
-      ORDER BY created_at DESC 
+      SELECT 
+        s.*,
+        c.first_name as coach_first_name,
+        c.last_name as coach_last_name,
+        c.email as coach_email
+      FROM subscriptions s
+      LEFT JOIN users c ON s.coach_id = c.id
+      WHERE s.user_id = $1 
+      ORDER BY s.created_at DESC 
       LIMIT 1
     `;
     const result = await pool.query(query, [userId]);
-    console.log('📊 Résultat de la recherche:', result.rows[0] || 'Aucun abonnement');
+    return result.rows[0];
+  }
+
+  static async findByCoachId(coachId, filters = {}) {
+    let query = `
+      SELECT 
+        s.*,
+        u.first_name as user_first_name,
+        u.last_name as user_last_name,
+        u.email as user_email,
+        c.first_name as coach_first_name,
+        c.last_name as coach_last_name
+      FROM subscriptions s
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN users c ON s.coach_id = c.id
+      WHERE s.coach_id = $1
+    `;
+    const values = [coachId];
+    let index = 2;
+
+    if (filters.status) {
+      query += ` AND s.status = $${index}`;
+      values.push(filters.status);
+      index++;
+    }
+
+    if (filters.isActive !== undefined) {
+      if (filters.isActive) {
+        query += ` AND s.status = 'active' AND s.end_date > CURRENT_DATE`;
+      } else {
+        query += ` AND (s.status != 'active' OR s.end_date <= CURRENT_DATE)`;
+      }
+    }
+
+    query += ' ORDER BY s.created_at DESC';
     
+    const result = await pool.query(query, values);
+    return result.rows;
+  }
+
+  static async getActiveByCoachId(coachId) {
+    const query = `
+      SELECT 
+        s.*,
+        u.first_name as user_first_name,
+        u.last_name as user_last_name,
+        u.email as user_email
+      FROM subscriptions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.coach_id = $1 
+        AND s.status = 'active' 
+        AND s.end_date > CURRENT_DATE
+      ORDER BY s.end_date ASC
+    `;
+    const result = await pool.query(query, [coachId]);
+    return result.rows;
+  }
+
+  static async updateCoach(subscriptionId, coachId) {
+    const query = `
+      UPDATE subscriptions 
+      SET coach_id = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `;
+    const result = await pool.query(query, [coachId, subscriptionId]);
     return result.rows[0];
   }
 

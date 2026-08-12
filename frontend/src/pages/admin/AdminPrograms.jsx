@@ -800,9 +800,6 @@ const AdminPrograms = () => {
                   Génération automatique des exercices (IA)
                 </label>
                 <FaMagic className="text-indigo-500" />
-                <span className="text-xs text-gray-500">
-                  (comme pour les adhérents)
-                </span>
               </div>
               <p className="text-xs text-gray-400 mt-1 ml-8">
                 {autoGenerate 

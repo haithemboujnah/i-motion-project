@@ -190,5 +190,26 @@ export const adminService = {
     const params = riskLevel ? `?riskLevel=${riskLevel}` : '';
     const response = await api.get(`/admin/churn/at-risk${params}`);
     return response.data;
-  }
+  },
+  
+  getAllSubscriptions: async () => {
+    try {
+      const response = await api.get('/admin/subscriptions');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching all subscriptions:', error);
+      throw error;
+    }
+  },
+
+  // ✅ Récupérer les statistiques des abonnements
+  getSubscriptionStats: async () => {
+    try {
+      const response = await api.get('/admin/subscriptions/stats');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching subscription stats:', error);
+      throw error;
+    }
+  },
 };

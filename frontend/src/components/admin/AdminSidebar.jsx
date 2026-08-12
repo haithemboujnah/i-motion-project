@@ -44,90 +44,92 @@ const AdminSidebar = () => {
     fetchStats();
   }, []);
 
-  const menuItems = [
-    { 
-      path: '/admin/dashboard', 
-      icon: FaHome, 
-      label: 'Tableau de bord',
-      description: "Vue d'ensemble"
-    },
-    { 
-      path: '/admin/users', 
-      icon: FaUsers, 
-      label: 'Utilisateurs',
-      description: 'Gestion des comptes',
-      badge: stats.totalUsers || 0,
-      badgeColor: 'bg-green-500'
-    },
-    { 
-      path: '/admin/sessions', 
-      icon: FaCalendar, 
-      label: 'Séances',
-      description: 'Gestion des séances',
-      badge: stats.totalSessions || 0,
-      badgeColor: 'bg-green-500'
-    },
-    { 
-      path: '/admin/programs', 
-      icon: FaDumbbell, 
-      label: 'Programmes',
-      description: 'Gestion des programmes',
-      badge: 'IA',
-      badgeColor: 'bg-red-500'
-    },
-    { 
-      path: '/admin/churn', 
-      icon: FaBrain, 
-      label: 'Prédiction Churn',
-      description: 'Analyse des désabonnements',
-      badge: 'IA',
-      badgeColor: 'bg-red-500'
-    },
-    { 
-      path: '/admin/gamification', 
-      icon: FaTrophy, 
-      label: 'Gamification',
-      description: 'Badges & challenges'
-    },
-    { 
-      path: '/admin/analytics', 
-      icon: FaChartLine, 
-      label: 'Analyse',
-      description: 'Prédictions & tendances'
-    },
-    { 
-      path: '/admin/supervision', 
-      icon: FaEye, 
-      label: 'Supervision',
-      description: 'Activités & rapports'
-    },
-    { 
-      path: '/admin/bi-dashboard', 
-      icon: FaChartBar, 
-      label: 'BI Dashboard',
-      description: 'Tableau de bord décisionnel',
-      badge:'BI'
-    },
-    { 
-      path: '/admin/feedback', 
-      icon: FaComments, 
-      label: 'Feedback',
-      description: 'Gestion des avis',
-      badge:'IA'
-    },
-    { 
-      path: '/admin/renewals', 
-      icon: FaSyncAlt, 
-      label: 'Renewals',
-      description: 'Gestion des renouvellements',
-    },
-    { 
-      path: '/admin/settings', 
-      icon: FaCog, 
-      label: 'Paramètres',
-      description: 'Configuration'
-    }
-  ];
+const menuItems = [
+  { 
+    path: '/admin/dashboard', 
+    icon: FaHome, 
+    label: 'Tableau de bord',
+    description: "Vue d'ensemble"
+  },
+  { 
+    path: '/admin/users', 
+    icon: FaUsers, 
+    label: 'Utilisateurs',
+    description: 'Gestion des comptes',
+    badge: stats.totalUsers || 0,
+    badgeColor: 'bg-green-500'
+  },
+  { 
+    path: '/admin/sessions', 
+    icon: FaCalendar, 
+    label: 'Séances',
+    description: 'Gestion des séances',
+    badge: stats.totalSessions || 0,
+    badgeColor: 'bg-green-500'
+  },
+  { 
+    path: '/admin/programs', 
+    icon: FaDumbbell, 
+    label: 'Programmes',
+    description: 'Gestion des programmes',
+    badge: 'IA',
+    badgeColor: 'bg-red-500'
+  },
+  { 
+    path: '/admin/gamification', 
+    icon: FaTrophy, 
+    label: 'Gamification',
+    description: 'Badges & challenges'
+  },
+  { 
+    path: '/admin/analytics', 
+    icon: FaChartLine, 
+    label: 'Analyse',
+    description: 'Prédictions & tendances'
+  },
+  { 
+    path: '/admin/bi-dashboard', 
+    icon: FaChartBar, 
+    label: 'BI Dashboard',
+    description: 'Tableau de bord décisionnel',
+    badge: 'BI',
+    badgeColor: 'bg-purple-500'
+  },
+  { 
+    path: '/admin/churn', 
+    icon: FaBrain, 
+    label: 'Prédiction Churn',
+    description: 'Analyse des désabonnements',
+    badge: 'IA',
+    badgeColor: 'bg-red-500'
+  },
+  { 
+    path: '/admin/renewals', 
+    icon: FaSyncAlt, 
+    label: 'Renewals',
+    description: 'Gestion des renouvellements'
+  },
+  { 
+    path: '/admin/supervision', 
+    icon: FaEye, 
+    label: 'Supervision',
+    description: 'Activités & rapports'
+  },
+  { 
+    path: '/admin/feedback', 
+    icon: FaComments, 
+    label: 'Feedback',
+    description: 'Gestion des avis',
+    badge: 'IA',
+    badgeColor: 'bg-red-500'
+  },
+  { 
+    path: '/admin/settings', 
+    icon: FaCog, 
+    label: 'Paramètres',
+    description: 'Configuration'
+  }
+];
 
   const isPathActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path);
@@ -243,7 +245,7 @@ const AdminSidebar = () => {
 
       {/* Footer avec bouton déconnexion (mode collapse) */}
       {isCollapsed && (
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-theme bg-theme-card">
+        <div className="absolute top-100 left-0 right-0 p-3 border-t border-theme bg-theme-card">
           <button
             onClick={() => authService.logout()}
             className="flex items-center justify-center w-full p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition"

@@ -36,12 +36,18 @@ const Performance = () => {
         performanceService.getEvolution('30 days')
       ]);
       
-      setMeasurements(measurementsRes.data.measurements || []);
+      // ✅ Récupérer toutes les mesures
+      const allMeasurements = measurementsRes.data.measurements || [];
+      setMeasurements(allMeasurements);
+      
       setStats(statsRes.data);
       
+      // ✅ Utiliser les mesures pour l'évolution (trier par date)
       let evolutionData = evolutionRes.data.evolution || [];
-      if (evolutionData.length === 0 && measurementsRes.data.measurements) {
-        evolutionData = measurementsRes.data.measurements
+      
+      // ✅ Si l'API d'évolution ne retourne rien, utiliser les mesures
+      if (evolutionData.length === 0 && allMeasurements.length > 0) {
+        evolutionData = allMeasurements
           .slice()
           .sort((a, b) => new Date(a.measured_at) - new Date(b.measured_at))
           .map(m => ({
@@ -53,6 +59,10 @@ const Performance = () => {
       }
       
       setEvolution(evolutionData);
+      
+      console.log('📊 Données d\'évolution:', evolutionData.length, 'points');
+      console.log('📊 Mesures disponibles:', allMeasurements.length, 'points');
+      
     } catch (error) {
       console.error('Error fetching performance data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -108,25 +118,41 @@ const Performance = () => {
 
   const handleAddMeasurement = async (e) => {
     e.preventDefault();
+    
+    // ✅ Validation des données
+    if (!formData.weight || isNaN(formData.weight)) {
+      toast.error('Veuillez entrer un poids valide');
+      return;
+    }
+    
     try {
-      await performanceService.addMeasurement({
-        ...formData,
+      const payload = {
         weight: parseFloat(formData.weight),
         body_fat: formData.body_fat ? parseFloat(formData.body_fat) : null,
-        muscle_mass: formData.muscle_mass ? parseFloat(formData.muscle_mass) : null
-      });
+        muscle_mass: formData.muscle_mass ? parseFloat(formData.muscle_mass) : null,
+        notes: formData.notes || null,
+        measured_at: new Date().toISOString()
+      };
+      
+      console.log('📤 Envoi des données:', payload);
+      
+      await performanceService.addMeasurement(payload);
       toast.success('Mesure ajoutée avec succès !');
       setShowAddModal(false);
       setFormData({ weight: '', body_fat: '', muscle_mass: '', notes: '' });
       fetchPerformanceData();
     } catch (error) {
+      console.error('❌ Erreur:', error.response?.data || error.message);
       toast.error(error.response?.data?.error || 'Erreur lors de l\'ajout');
     }
   };
 
-  // ✅ Graphique avec courbe SINUSOÏDALE (CORRIGÉ)
+  // ✅ Graphique d'évolution (CORRIGÉ)
   const renderEvolutionChart = () => {
-    if (!evolution || evolution.length === 0) {
+    // ✅ Utiliser les mesures si evolution est vide
+    const dataToUse = evolution.length > 0 ? evolution : measurements;
+    
+    if (!dataToUse || dataToUse.length === 0) {
       return (
         <div className="text-center py-12">
           <FaChartLine className="text-6xl text-gray-300 mx-auto mb-4" />
@@ -145,12 +171,12 @@ const Performance = () => {
       );
     }
 
-    // Trier les données par date
-    const sortedData = [...evolution].sort((a, b) => 
+    // ✅ Trier les données par date
+    const sortedData = [...dataToUse].sort((a, b) => 
       new Date(a.measured_at) - new Date(b.measured_at)
     );
 
-    // Si une seule donnée
+    // ✅ Si une seule donnée
     if (sortedData.length === 1) {
       return (
         <div className="text-center py-12">
@@ -158,12 +184,32 @@ const Performance = () => {
           <p className="text-sm text-gray-400 mt-1">
             Ajoutez plus de mesures pour voir l'évolution
           </p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn-logo text-sm inline-block mt-4"
+          >
+            <FaPlus className="inline mr-2" />
+            Ajouter une mesure
+          </button>
         </div>
       );
     }
 
-    const maxWeight = Math.max(...sortedData.map(p => p.weight));
-    const minWeight = Math.min(...sortedData.map(p => p.weight));
+    // ✅ S'assurer que toutes les données ont un poids valide
+    const validData = sortedData.filter(d => d.weight && !isNaN(d.weight));
+    if (validData.length < 2) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Données insuffisantes pour le graphique</p>
+          <p className="text-sm text-gray-400 mt-1">
+            Ajoutez plus de mesures avec des poids valides
+          </p>
+        </div>
+      );
+    }
+
+    const maxWeight = Math.max(...validData.map(p => p.weight));
+    const minWeight = Math.min(...validData.map(p => p.weight));
     const range = maxWeight - minWeight || 1;
     const padding = 40;
     const chartWidth = 700;
@@ -177,7 +223,7 @@ const Performance = () => {
             viewBox={`0 0 ${chartWidth + padding * 2} ${chartHeight + padding * 2 + 30}`}
             preserveAspectRatio="xMidYMid meet"
           >
-            {/* === GRILLE HORIZONTALE === */}
+            {/* GRILLE HORIZONTALE */}
             {[0, 1, 2, 3, 4].map((i) => {
               const y = padding + (i / 4) * chartHeight;
               const value = maxWeight - (i / 4) * range;
@@ -205,9 +251,9 @@ const Performance = () => {
               );
             })}
 
-            {/* === LIGNES VERTICALES === */}
-            {sortedData.map((point, index) => {
-              const x = padding + (index / (sortedData.length - 1)) * chartWidth;
+            {/* LIGNES VERTICALES */}
+            {validData.map((point, index) => {
+              const x = padding + (index / (validData.length - 1)) * chartWidth;
               return (
                 <line
                   key={`vline-${index}`}
@@ -222,7 +268,7 @@ const Performance = () => {
               );
             })}
 
-            {/* === DÉGRADÉ === */}
+            {/* DÉGRADÉ */}
             <defs>
               <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#57a1ce" stopOpacity="0.3"/>
@@ -230,12 +276,12 @@ const Performance = () => {
               </linearGradient>
             </defs>
 
-            {/* === ZONE SOUS LA COURBE === */}
+            {/* ZONE SOUS LA COURBE */}
             <polygon
               points={`
                 ${padding},${padding + chartHeight}
-                ${sortedData.map((point, index) => {
-                  const x = padding + (index / (sortedData.length - 1)) * chartWidth;
+                ${validData.map((point, index) => {
+                  const x = padding + (index / (validData.length - 1)) * chartWidth;
                   const y = padding + chartHeight - ((point.weight - minWeight) / range) * chartHeight;
                   return `${x},${y}`;
                 }).join(' ')}
@@ -244,10 +290,10 @@ const Performance = () => {
               fill="url(#areaGradient)"
             />
 
-            {/* === COURBE PRINCIPALE (SINUSOÏDALE) === */}
+            {/* COURBE PRINCIPALE */}
             <polyline
-              points={sortedData.map((point, index) => {
-                const x = padding + (index / (sortedData.length - 1)) * chartWidth;
+              points={validData.map((point, index) => {
+                const x = padding + (index / (validData.length - 1)) * chartWidth;
                 const y = padding + chartHeight - ((point.weight - minWeight) / range) * chartHeight;
                 return `${x},${y}`;
               }).join(' ')}
@@ -258,9 +304,9 @@ const Performance = () => {
               strokeLinejoin="round"
             />
 
-            {/* === POINTS === */}
-            {sortedData.map((point, index) => {
-              const x = padding + (index / (sortedData.length - 1)) * chartWidth;
+            {/* POINTS */}
+            {validData.map((point, index) => {
+              const x = padding + (index / (validData.length - 1)) * chartWidth;
               const y = padding + chartHeight - ((point.weight - minWeight) / range) * chartHeight;
               
               return (
@@ -284,13 +330,13 @@ const Performance = () => {
               );
             })}
 
-            {/* === DATES EN BAS === */}
-            {sortedData.map((point, index) => {
-              const x = padding + (index / (sortedData.length - 1)) * chartWidth;
+            {/* DATES EN BAS */}
+            {validData.map((point, index) => {
+              const x = padding + (index / (validData.length - 1)) * chartWidth;
               const date = new Date(point.measured_at);
               const showDate = index === 0 || 
-                              index === sortedData.length - 1 || 
-                              index % Math.max(1, Math.ceil(sortedData.length / 6)) === 0;
+                              index === validData.length - 1 || 
+                              index % Math.max(1, Math.ceil(validData.length / 6)) === 0;
               
               if (!showDate) return null;
               
@@ -311,16 +357,16 @@ const Performance = () => {
           </svg>
         </div>
 
-        {/* === LÉGENDE === */}
+        {/* LÉGENDE */}
         <div className="flex justify-between mt-2 text-xs text-gray-400">
-          <span>{new Date(sortedData[0]?.measured_at).toLocaleDateString('fr-FR')}</span>
+          <span>{new Date(validData[0]?.measured_at).toLocaleDateString('fr-FR')}</span>
           <span className="font-medium text-[#57a1ce]">
             {minWeight.toFixed(1)} kg → {maxWeight.toFixed(1)} kg
           </span>
-          <span>{new Date(sortedData[sortedData.length - 1]?.measured_at).toLocaleDateString('fr-FR')}</span>
+          <span>{new Date(validData[validData.length - 1]?.measured_at).toLocaleDateString('fr-FR')}</span>
         </div>
 
-        {/* === STATISTIQUES RAPIDES === */}
+        {/* STATISTIQUES RAPIDES */}
         <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
           <div className="text-center">
             <p className="text-xs text-gray-500">Valeur min</p>
@@ -421,9 +467,9 @@ const Performance = () => {
                     <h3 className="font-semibold text-gray-800">
                       📈 Évolution du poids
                     </h3>
-                    {evolution && evolution.length > 0 && (
+                    {measurements && measurements.length > 0 && (
                       <span className="text-xs text-gray-400">
-                        {evolution.length} mesures
+                        {measurements.length} mesures
                       </span>
                     )}
                   </div>

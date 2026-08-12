@@ -103,4 +103,37 @@ export const coachService = {
     const response = await api.get('/coach/churn/analysis');
     return response.data;
   },
+
+  getAllCoaches: async () => {
+    try {
+      const response = await api.get('/users?role=coach');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching coaches:', error);
+      throw error;
+    }
+  },
+
+  getCoachesWithAvailability: async () => {
+    const response = await api.get('/coaches/availability');
+    return response.data;
+  },
+
+  // ✅ Récupérer les adhérents avec leurs abonnements
+  getAdherentsWithSubscriptions: async () => {
+    const response = await api.get('/coach/subscriptions/adherents');
+    return response.data;
+  },
+
+  // ✅ Récupérer les détails de l'abonnement d'un adhérent
+  getAdherentSubscriptionDetail: async (adherentId) => {
+    const response = await api.get(`/coach/subscriptions/adherents/${adherentId}/detail`);
+    return response.data;
+  },
+
+  // ✅ Mettre à jour l'abonnement d'un adhérent
+  updateAdherentSubscription: async (adherentId, data) => {
+    const response = await api.put(`/coach/subscriptions/adherents/${adherentId}/subscription`, data);
+    return response.data;
+  },
 };

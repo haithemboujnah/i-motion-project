@@ -95,12 +95,12 @@ const Sidebar = () => {
     { path: '/performance', icon: FaChartLine, label: 'Performances', description: 'Suivi de progression', badge: null },
     { path: '/programs', icon: FaDumbbell, label: 'Programmes', description: 'Personnalisés', badge: 'IA' },
     { path: '/exercises', icon: FaBookOpen, label: 'Exercices', description: 'Bibliothèque', badge: null },
-    { path: '/subscription', icon: FaCrown, label: 'Abonnement', description: 'Gérer mon abonnement', badge: "€"}, 
-    { path: '/payment/history', icon: FaHistory, label: 'Historique Paiements', description: 'Mes transactions', badge: null},
     { path: '/gamification', icon: FaTrophy, label: 'Gamification', description: 'Points et badges', badge: null },
+    { path: '/subscription', icon: FaCrown, label: 'Abonnement', description: 'Gérer mon abonnement', badge: "€"},
+    { path: '/payment/history', icon: FaHistory, label: 'Historique Paiements', description: 'Mes transactions', badge: null},
+    { path: '/qr-code', icon: FaQrcode, label: 'Mon QR Code', description: 'Accès rapide', badge: null },
     { path: '/chatbot', icon: FaRobot, label: 'Assistant IA', description: 'Chatbot intelligent', badge: "IA" },
-    { path: '/qr-code', icon: FaQrcode, label: 'Mon QR Code' },
-    { path: '/feedback', icon: FaComment, label: 'Feedback'}
+    { path: '/feedback', icon: FaComment, label: 'Feedback', description: 'Donner mon avis', badge: null }
   ];
 
   return (

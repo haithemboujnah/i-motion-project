@@ -1,5 +1,6 @@
 const express = require('express');
 
+const userRoutes = require('./users');
 // Routes Adhérent
 const authRoutes = require('./adherent/authRoutes');
 const sessionRoutes = require('./adherent/sessionRoutes');
@@ -9,12 +10,14 @@ const gamificationRoutes = require('./adherent/gamificationRoutes');
 const notificationRoutes = require('./adherent/notificationRoutes');
 const exerciseRoutes = require('./adherent/exerciseRoutes');
 const reminderRoutes = require('./reminderRoutes');
+
 // Routes Coach
 const coachRoutes = require('./coach/coachRoutes');
 const coachAdherentRoutes = require('./coach/coachAdherentRoutes');
 const coachSessionRoutes = require('./coach/coachSessionRoutes');
 const coachPerformanceRoutes = require('./coach/coachPerformanceRoutes');
 const coachChurnRoutes = require('./coach/coachChurnRoutes');
+const coachSubscriptionRoutes = require('./coach/coachSubscriptionRoutes');
 
 // Routes Admin
 const adminRoutes = require('./admin/adminRoutes');
@@ -25,6 +28,7 @@ const adminAnalyticsRoutes = require('./admin/adminAnalyticsRoutes');
 const adminSupervisionRoutes = require('./admin/adminSupervisionRoutes');
 const adminSessionRoutes = require('./admin/adminSessionRoutes');
 const adminChurnRoutes = require('./admin/adminChurnRoutes');
+const adminSubscriptionRoutes = require('./admin/adminSubscriptionRoutes');
 
 const paymentRoutes = require('./paymentRoutes');
 const chatbotRoutes = require('./chatbotRoutes');
@@ -35,6 +39,8 @@ const biRoutes = require('./biRoutes');
 const router = express.Router();
 
 console.log('📋 Registering routes...');
+
+router.use('/users', userRoutes);
 
 // Routes Adhérent
 router.use('/auth', authRoutes);
@@ -53,6 +59,7 @@ router.use('/coach/adherents', coachAdherentRoutes);
 router.use('/coach/sessions', coachSessionRoutes);
 router.use('/coach/performances', coachPerformanceRoutes);
 router.use('/coach/churn', coachChurnRoutes);
+router.use('/coach/subscriptions', coachSubscriptionRoutes);
 console.log('✅ Coach routes registered');
 
 // Routes Admin
@@ -64,6 +71,7 @@ router.use('/admin/analytics', adminAnalyticsRoutes);
 router.use('/admin/supervision', adminSupervisionRoutes);
 router.use('/admin/sessions', adminSessionRoutes);
 router.use('/admin/churn', adminChurnRoutes);
+router.use('/admin/subscriptions', adminSubscriptionRoutes);
 console.log('✅ Admin routes registered');
 
 // ✅ Routes Payment

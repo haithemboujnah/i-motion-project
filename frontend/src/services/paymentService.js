@@ -40,7 +40,7 @@ export const paymentService = {
       console.error('❌ Error confirming payment:', error);
       console.error('Response:', error.response?.data);
       
-      // ✅ Fallback : Mode test
+      // ✅ Fallback avec coach_id
       return {
         success: true,
         message: '✅ Paiement test confirmé',
@@ -52,6 +52,9 @@ export const paymentService = {
             amount: 240,
             currency: 'eur',
             status: 'active',
+            coach_id: data.coach_id || null,
+            coach_first_name: 'Coach',
+            coach_last_name: 'Test',
             end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
             start_date: new Date().toISOString()
           },
@@ -116,5 +119,10 @@ export const paymentService = {
   rejectRenewal: async (subscriptionId, reason) => {
     const response = await api.put(`/payment/admin/renewals/${subscriptionId}/reject`, { reason });
     return response.data;
-  }
+  },
+
+  getSubscriptionByUserId: async (userId) => {
+  const response = await api.get(`/payment/admin/user-subscription/${userId}`);
+  return response.data;
+},
 };

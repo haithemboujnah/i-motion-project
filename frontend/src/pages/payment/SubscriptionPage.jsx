@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { 
   FaCheck, FaCrown, FaCreditCard, FaSpinner, FaShieldAlt,
   FaClock, FaStar, FaLock, FaCalendarCheck, FaTimes,
-  FaArrowLeft, FaSync, FaBell, FaEnvelope, FaExclamationTriangle
+  FaArrowLeft, FaSync, FaBell, FaEnvelope, FaUserTie,
+  FaUser, FaPhone, FaMapMarkerAlt, FaInfoCircle
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -12,10 +13,13 @@ import Navbar from '../../components/adherent/AdherentNavbar';
 import Sidebar from '../../components/adherent/AdherentSidebar';
 import { paymentService } from '../../services/paymentService';
 import { authService } from '../../services/authService';
+import { coachService } from '../../services/coachService';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
+// ✅ Options de carte avec mode test
 const CARD_ELEMENT_OPTIONS = {
   style: {
     base: {
@@ -32,9 +36,18 @@ const CARD_ELEMENT_OPTIONS = {
       iconColor: '#ef4444',
     },
   },
+  classes: {
+    base: 'StripeElement',
+    complete: 'StripeElement--complete',
+    empty: 'StripeElement--empty',
+    focus: 'StripeElement--focus',
+    invalid: 'StripeElement--invalid',
+    webkitAutofill: 'StripeElement--webkit-autofill',
+  },
+  hidePostalCode: true,
 };
 
-const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
+const PaymentForm = ({ planId, planName, planPrice, coachId, onSuccess, onCancel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -42,6 +55,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
   const [clientSecret, setClientSecret] = useState(null);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
   const [cardComplete, setCardComplete] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     createPaymentIntent();
@@ -76,7 +90,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
       return;
     }
     
-    setLoading(true);
+    setConfirming(true);
     setError(null);
     
     const cardElement = elements.getElement(CardElement);
@@ -98,14 +112,18 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
       if (stripeError) {
         setError(stripeError.message);
         toast.error(stripeError.message);
-        setLoading(false);
+        setConfirming(false);
         return;
       }
       
       if (paymentIntent.status === 'succeeded') {
+        // ✅ Confirmer avec coach_id (s'assurer que coachId est bien passé)
+        console.log('📤 Confirming payment with coach_id:', coachId);
+        
         const confirmResponse = await paymentService.confirmPayment({
           paymentIntentId: paymentIntent.id,
-          testMode: false
+          testMode: false,
+          coach_id: coachId // ✅ IMPORTANT: passer le coach_id
         });
         
         if (confirmResponse.success) {
@@ -124,7 +142,7 @@ const PaymentForm = ({ planId, planName, planPrice, onSuccess, onCancel }) => {
       setError(err.message);
       toast.error(err.message);
     } finally {
-      setLoading(false);
+      setConfirming(false);
     }
   };
 
@@ -230,6 +248,8 @@ const SubscriptionPage = () => {
   const navigate = useNavigate();
   const user = authService.getUser();
   const [plans, setPlans] = useState([]);
+  const [coaches, setCoaches] = useState([]);
+  const [selectedCoach, setSelectedCoach] = useState(null);
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -242,6 +262,7 @@ const SubscriptionPage = () => {
 
   useEffect(() => {
     fetchData();
+    fetchCoaches();
   }, []);
 
   const fetchData = async () => {
@@ -256,6 +277,11 @@ const SubscriptionPage = () => {
       setPlans(plansRes.data.plans || []);
       setCurrentSubscription(subRes.data.subscription || null);
       setTransactions(transRes.data.transactions || []);
+      
+      // Si l'utilisateur a déjà un abonnement, sélectionner son coach
+      if (subRes.data.subscription?.coach_id) {
+        setSelectedCoach(subRes.data.subscription.coach_id);
+      }
     } catch (error) {
       console.error('Error fetching subscription data:', error);
       toast.error('Erreur lors du chargement des données');
@@ -264,15 +290,42 @@ const SubscriptionPage = () => {
     }
   };
 
+  const fetchCoaches = async () => {
+    try {
+      // Essayer de récupérer depuis l'API
+      const response = await api.get('/users?role=coach');
+      if (response.data.success && response.data.data.users) {
+        const coachesList = response.data.data.users.filter(u => u.role === 'coach');
+        if (coachesList.length > 0) {
+          setCoaches(coachesList);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ API coaches indisponible, utilisation des données mockées');
+    }
+  };
+
   const handlePlanSelect = (plan) => {
+    if (!selectedCoach) {
+      toast.error('Veuillez d\'abord sélectionner un coach');
+      return;
+    }
     setSelectedPlan(plan);
     setStep('payment');
   };
 
   const handlePaymentSuccess = (subscriptionData) => {
+    console.log('✅ Abonnement reçu:', subscriptionData);
     setSubscription(subscriptionData);
     setStep('success');
     toast.success('🎉 Abonnement activé avec succès !');
+    
+    // ✅ Mettre à jour l'affichage avec le coach
+    if (subscriptionData.coach_id) {
+      setSelectedCoach(subscriptionData.coach_id);
+    }
+    
     fetchData();
   };
 
@@ -295,7 +348,6 @@ const SubscriptionPage = () => {
     }
   };
 
-  // ✅ Demander le renouvellement (UNIQUEMENT pour les expirés)
   const handleRequestRenewal = async () => {
     if (!window.confirm('Souhaitez-vous demander le renouvellement de votre abonnement ?')) {
       return;
@@ -345,13 +397,8 @@ const SubscriptionPage = () => {
     return labels[status] || status;
   };
 
-  // ✅ Vérifier si l'utilisateur a un abonnement
-  const hasSubscription = currentSubscription !== null;
-  
-  // ✅ Vérifier si l'abonnement est actif
   const isSubscribed = currentSubscription && currentSubscription.status === 'active';
   
-  // ✅ Vérifier si l'abonnement est encore valide (date de fin)
   const isSubscriptionValid = () => {
     if (!currentSubscription) return false;
     if (currentSubscription.status !== 'active' && currentSubscription.status !== 'pending_renewal') return false;
@@ -360,10 +407,7 @@ const SubscriptionPage = () => {
     return endDate > now;
   };
 
-  // ✅ Vérifier si l'abonnement est en attente de renouvellement
   const isPendingRenewal = currentSubscription && currentSubscription.status === 'pending_renewal';
-
-  // ✅ Vérifier si l'abonnement est expiré
   const isExpired = () => {
     if (!currentSubscription) return false;
     if (currentSubscription.status !== 'active') return false;
@@ -372,17 +416,14 @@ const SubscriptionPage = () => {
     return endDate < now;
   };
 
-  // ✅ Vérifier si l'abonnement peut être renouvelé (UNIQUEMENT expiré)
   const canRequestRenewal = () => {
     if (!currentSubscription) return false;
     if (currentSubscription.status === 'pending_renewal') return false;
     if (currentSubscription.status === 'renewal_rejected') return false;
     if (currentSubscription.status === 'cancelled') return false;
-    // ✅ UNIQUEMENT pour les abonnements expirés
     return isExpired();
   };
 
-  // ✅ Calculer les jours restants avant expiration
   const getDaysRemaining = () => {
     if (!currentSubscription || !currentSubscription.end_date) return 0;
     const endDate = new Date(currentSubscription.end_date);
@@ -391,14 +432,12 @@ const SubscriptionPage = () => {
     return Math.max(0, diff);
   };
 
-  // ✅ Vérifier si l'utilisateur peut s'abonner
   const canSubscribe = () => {
     if (!isSubscribed) return true;
     if (!isSubscriptionValid()) return true;
     return false;
   };
 
-  // ✅ Voir le plan actuel de l'utilisateur
   const getCurrentPlan = () => {
     if (!currentSubscription) return null;
     return plans.find(p => p.id === currentSubscription.plan_type);
@@ -410,7 +449,7 @@ const SubscriptionPage = () => {
   const showRenewalButton = isSubscriptionExpired && !isPendingRenewal;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navbar />
       <div className="flex">
         <Sidebar />
@@ -418,12 +457,12 @@ const SubscriptionPage = () => {
           <div className="max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h1 className="text-3xl font-display font-bold text-gray-900 flex items-center gap-3">
+                <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white flex items-center gap-3">
                   <FaCrown className="text-yellow-500" />
                   Abonnement
                 </h1>
-                <p className="text-gray-500 mt-1">
-                  Gérez votre abonnement et accédez à toutes les fonctionnalités
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  Choisissez votre coach et votre abonnement
                 </p>
               </div>
               {currentSubscription && (
@@ -439,7 +478,57 @@ const SubscriptionPage = () => {
               </div>
             ) : (
               <>
-                {/* ✅ Abonnement ACTIF - Pas de bouton de renouvellement */}
+                {/* ✅ Sélection du coach (uniquement si pas d'abonnement actif) */}
+                {!isSubscribed && step === 'plans' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 mb-6"
+                  >
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                      <FaUserTie className="text-[#57a1ce]" />
+                      Sélectionnez votre coach
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {coaches.map((coach) => (
+                        <button
+                          key={coach.id}
+                          onClick={() => setSelectedCoach(coach.id)}
+                          className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                            selectedCoach === coach.id
+                              ? 'border-[#57a1ce] bg-[#57a1ce]/10 shadow-sm'
+                              : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-[#57a1ce]/20 flex items-center justify-center text-[#57a1ce] font-bold">
+                              {coach.first_name?.[0]}{coach.last_name?.[0]}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-800 dark:text-white">
+                                {coach.first_name} {coach.last_name}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {coach.speciality || 'Coach sportif'}
+                              </p>
+                            </div>
+                          </div>
+                          {selectedCoach === coach.id && (
+                            <FaCheck className="text-[#57a1ce] mt-2" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    {!selectedCoach && (
+                      <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-3 flex items-center gap-1">
+                        <FaInfoCircle />
+                        Veuillez sélectionner un coach pour continuer
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* ✅ Abonnement actif - Afficher le coach */}
                 {currentSubscription && isSubscriptionValid() && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -463,12 +552,14 @@ const SubscriptionPage = () => {
                           </span>
                         </div>
                         <h2 className="text-2xl font-bold mb-2">
-                          {currentSubscription.plan_name || 
-                           (currentSubscription.plan_type === 'monthly' && 'Abonnement Mensuel') ||
-                           (currentSubscription.plan_type === 'quarterly' && 'Abonnement Trimestriel') ||
-                           (currentSubscription.plan_type === 'yearly' && 'Abonnement Annuel') ||
-                           currentSubscription.plan_type}
+                          {currentSubscription.plan_name || currentSubscription.plan_type}
                         </h2>
+                        <p className="text-white/80">
+                          Coach :{' '}
+                          <span className="font-bold">
+                            {currentSubscription.coach_first_name} {currentSubscription.coach_last_name}
+                          </span>
+                        </p>
                         <p className="text-white/80">
                           Valable jusqu'au{' '}
                           <span className="font-bold">
@@ -492,7 +583,6 @@ const SubscriptionPage = () => {
                         )}
                       </div>
                       <div className="mt-4 md:mt-0 flex flex-col gap-2">
-                        {/* ❌ PAS de bouton "Demander le renouvellement" pour les actifs */}
                         {!isPendingRenewal && currentSubscription.status === 'active' && (
                           <button
                             onClick={handleCancelSubscription}
@@ -512,94 +602,18 @@ const SubscriptionPage = () => {
                   </motion.div>
                 )}
 
-                {/* ✅ Abonnement EXPIRÉ - Afficher le bouton de renouvellement */}
-                {currentSubscription && isSubscriptionExpired && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-8 text-white mb-8 shadow-lg"
-                  >
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <FaExclamationTriangle className="text-xl" />
-                          <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">
-                            ⚠️ Abonnement expiré
-                          </span>
-                        </div>
-                        <h2 className="text-2xl font-bold mb-2">
-                          {currentSubscription.plan_name || 'Abonnement'}
-                        </h2>
-                        <p className="text-white/80">
-                          Expiré depuis le{' '}
-                          <span className="font-bold">
-                            {new Date(currentSubscription.end_date).toLocaleDateString('fr-FR', {
-                              day: '2-digit',
-                              month: 'long',
-                              year: 'numeric'
-                            })}
-                          </span>
-                        </p>
-                        <p className="text-sm text-white/60 mt-2">
-                          Renouvelez votre abonnement pour accéder à toutes les fonctionnalités
-                        </p>
-                      </div>
-                      <div className="mt-4 md:mt-0 flex flex-col gap-2">
-                        {/* ✅ UNIQUEMENT le bouton de renouvellement pour les expirés */}
-                        <button
-                          onClick={() => setShowRenewalModal(true)}
-                          className="px-6 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition flex items-center gap-2"
-                        >
-                          <FaSync /> Renouveler l'abonnement
-                        </button>
-                        <button
-                          onClick={() => navigate('/payment/history')}
-                          className="px-6 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition"
-                        >
-                          Voir historique
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Message si abonnement en cours d'annulation ou refusé */}
-                {currentSubscription && !isSubscriptionValid() && !isSubscriptionExpired && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-                    <div className="flex items-center gap-3">
-                      <FaClock className="text-yellow-600 text-xl" />
-                      <div>
-                        <p className="font-medium text-yellow-800">
-                          {currentSubscription.status === 'cancelling' 
-                            ? 'Votre abonnement sera résilié à la fin de la période en cours'
-                            : currentSubscription.status === 'renewal_rejected'
-                            ? 'Votre demande de renouvellement a été refusée'
-                            : 'Votre abonnement a expiré'}
-                        </p>
-                        <p className="text-sm text-yellow-700">
-                          {currentSubscription.status === 'cancelling'
-                            ? `Valable jusqu'au ${new Date(currentSubscription.end_date).toLocaleDateString('fr-FR')}`
-                            : currentSubscription.status === 'renewal_rejected'
-                            ? 'Contactez l\'administrateur pour plus d\'informations'
-                            : 'Souscrivez un nouvel abonnement pour continuer à profiter de toutes les fonctionnalités'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Plans d'abonnement */}
                 {step === 'plans' && (
                   <>
                     {isSubscriptionValid() && !isPendingRenewal && (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 rounded-xl p-4 mb-6">
                         <div className="flex items-center gap-3">
-                          <FaCheck className="text-green-600 text-xl" />
+                          <FaCheck className="text-green-600 dark:text-green-400 text-xl" />
                           <div>
-                            <p className="font-medium text-green-800">
+                            <p className="font-medium text-green-800 dark:text-green-300">
                               Vous êtes déjà abonné !
                             </p>
-                            <p className="text-sm text-green-700">
+                            <p className="text-sm text-green-700 dark:text-green-400">
                               Votre abonnement est actif jusqu'au {new Date(currentSubscription.end_date).toLocaleDateString('fr-FR')}
                             </p>
                           </div>
@@ -619,12 +633,12 @@ const SubscriptionPage = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 * plans.indexOf(plan) }}
-                            className={`bg-white rounded-2xl p-6 shadow-sm border-2 transition-all duration-300 ${
+                            className={`bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border-2 transition-all duration-300 ${
                               isActivePlan 
                                 ? 'border-green-400 shadow-lg' 
                                 : isPopular 
                                   ? 'border-yellow-400' 
-                                  : 'border-gray-200 hover:border-blue-300'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'
                             } ${isPopular ? 'relative' : ''} ${!canSubscribe() && !isActivePlan ? 'opacity-60' : ''}`}
                           >
                             {isPopular && !isActivePlan && (
@@ -640,16 +654,16 @@ const SubscriptionPage = () => {
                             )}
                             
                             <div className="text-center mb-4">
-                              <h3 className="text-xl font-bold text-gray-800">{plan.name}</h3>
+                              <h3 className="text-xl font-bold text-gray-800 dark:text-white">{plan.name}</h3>
                               <div className="mt-2">
-                                <span className="text-4xl font-bold text-gray-900">{plan.price}DT</span>
-                                <span className="text-gray-500"> / {plan.interval}</span>
+                                <span className="text-4xl font-bold text-gray-900 dark:text-white">{plan.price}DT</span>
+                                <span className="text-gray-500 dark:text-gray-400"> / {plan.interval}</span>
                               </div>
                             </div>
                             
                             <ul className="space-y-2 mb-4">
                               {plan.features.slice(0, 4).map((feature, index) => (
-                                <li key={index} className={`flex items-center gap-2 text-sm ${isActivePlan ? 'text-gray-700' : 'text-gray-600'}`}>
+                                <li key={index} className={`flex items-center gap-2 text-sm ${isActivePlan ? 'text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400'}`}>
                                   <FaCheck className={`flex-shrink-0 ${isActivePlan ? 'text-green-500' : 'text-green-500'}`} />
                                   {feature}
                                 </li>
@@ -657,18 +671,21 @@ const SubscriptionPage = () => {
                             </ul>
                             
                             {isActivePlan ? (
-                              <div className="w-full bg-green-100 text-green-700 text-sm font-medium py-3 rounded-xl text-center">
+                              <div className="w-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-sm font-medium py-3 rounded-xl text-center">
                                 ✅ Abonnement actif
                               </div>
                             ) : !canSubscribe() ? (
-                              <div className="w-full bg-gray-100 text-gray-500 text-sm font-medium py-3 rounded-xl text-center cursor-not-allowed">
+                              <div className="w-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-medium py-3 rounded-xl text-center cursor-not-allowed">
                                 🔒 Abonnement en cours
+                              </div>
+                            ) : !selectedCoach ? (
+                              <div className="w-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-sm font-medium py-3 rounded-xl text-center cursor-not-allowed">
+                                👤 Sélectionnez un coach
                               </div>
                             ) : (
                               <button
                                 onClick={() => handlePlanSelect(plan)}
                                 className="w-full btn-logo text-sm"
-                                disabled={!canSubscribe()}
                               >
                                 S'abonner
                               </button>
@@ -683,11 +700,12 @@ const SubscriptionPage = () => {
                 {/* Paiement intégré */}
                 {step === 'payment' && selectedPlan && (
                   <Elements stripe={stripePromise}>
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                       <PaymentForm
                         planId={selectedPlan.id}
                         planName={selectedPlan.name}
                         planPrice={selectedPlan.price}
+                        coachId={selectedCoach}
                         onSuccess={handlePaymentSuccess}
                         onCancel={handlePaymentCancel}
                       />
@@ -700,20 +718,20 @@ const SubscriptionPage = () => {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white rounded-2xl p-8 shadow-sm border-2 border-green-200 text-center"
+                    className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border-2 border-green-200 dark:border-green-800/30 text-center"
                   >
-                    <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
-                      <FaCheck className="text-4xl text-green-500" />
+                    <div className="w-20 h-20 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                      <FaCheck className="text-4xl text-green-500 dark:text-green-400" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                       🎉 Abonnement activé !
                     </h2>
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
                       Votre abonnement est maintenant actif. Vous avez accès à toutes les fonctionnalités.
                     </p>
-                    <div className="p-4 bg-gray-50 rounded-lg mb-4">
-                      <p className="text-sm text-gray-500">Valable jusqu'au</p>
-                      <p className="text-lg font-semibold text-gray-900">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Valable jusqu'au</p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
                         {new Date(subscription.end_date).toLocaleDateString('fr-FR', {
                           day: '2-digit',
                           month: 'long',
@@ -734,35 +752,35 @@ const SubscriptionPage = () => {
                 {step === 'plans' && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                      <div className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3">
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex items-center gap-3 border border-gray-200 dark:border-gray-700">
                         <FaShieldAlt className="text-green-500 text-2xl" />
                         <div>
-                          <p className="text-sm font-medium text-gray-800">Paiement sécurisé</p>
-                          <p className="text-xs text-gray-500">Stripe garantit la sécurité de vos transactions</p>
+                          <p className="text-sm font-medium text-gray-800 dark:text-white">Paiement sécurisé</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Stripe garantit la sécurité de vos transactions</p>
                         </div>
                       </div>
-                      <div className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3">
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex items-center gap-3 border border-gray-200 dark:border-gray-700">
                         <FaCreditCard className="text-blue-500 text-2xl" />
                         <div>
-                          <p className="text-sm font-medium text-gray-800">Paiement flexible</p>
-                          <p className="text-xs text-gray-500">Carte bancaire, PayPal, Apple Pay</p>
+                          <p className="text-sm font-medium text-gray-800 dark:text-white">Paiement flexible</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Carte bancaire, PayPal, Apple Pay</p>
                         </div>
                       </div>
-                      <div className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-3">
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm flex items-center gap-3 border border-gray-200 dark:border-gray-700">
                         <FaClock className="text-orange-500 text-2xl" />
                         <div>
-                          <p className="text-sm font-medium text-gray-800">Annulation facile</p>
-                          <p className="text-xs text-gray-500">Annulez à tout moment depuis votre espace</p>
+                          <p className="text-sm font-medium text-gray-800 dark:text-white">Annulation facile</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Annulez à tout moment depuis votre espace</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30">
                       <div className="flex items-center gap-3">
-                        <FaStar className="text-purple-600 text-xl" />
+                        <FaStar className="text-purple-600 dark:text-purple-400 text-xl" />
                         <div>
-                          <h4 className="font-medium text-purple-800">Offre spéciale</h4>
-                          <p className="text-sm text-purple-600">
+                          <h4 className="font-medium text-purple-800 dark:text-purple-300">Offre spéciale</h4>
+                          <p className="text-sm text-purple-600 dark:text-purple-400">
                             L'abonnement annuel vous offre 2 mois gratuits et un accès prioritaire à toutes les fonctionnalités
                           </p>
                         </div>
@@ -776,30 +794,30 @@ const SubscriptionPage = () => {
         </main>
       </div>
 
-      {/* ✅ Modal de demande de renouvellement (UNIQUEMENT pour expirés) */}
+      {/* Modal de renouvellement */}
       {showRenewalModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 max-w-md w-full"
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <FaSync className="text-blue-500" />
                 Renouveler l'abonnement
               </h2>
               <button
                 onClick={() => setShowRenewalModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
               >
-                <FaTimes className="text-gray-500" />
+                <FaTimes className="text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                <p className="text-sm text-red-700">
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/30">
+                <p className="text-sm text-red-700 dark:text-red-400">
                   ⚠️ Votre abonnement a expiré le{' '}
                   <strong>{new Date(currentSubscription?.end_date).toLocaleDateString('fr-FR')}</strong>.
                   <br />
@@ -810,7 +828,7 @@ const SubscriptionPage = () => {
               <div>
                 <label className="label-custom">Durée du renouvellement</label>
                 <select
-                  className="input-logo"
+                  className="input-logo dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   value={renewalDuration}
                   onChange={(e) => setRenewalDuration(e.target.value)}
                 >
@@ -820,8 +838,8 @@ const SubscriptionPage = () => {
                 </select>
               </div>
 
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2 text-sm text-blue-700">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800/30">
+                <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
                   <FaEnvelope className="text-blue-500" />
                   <span>Vous recevrez une confirmation par email</span>
                 </div>

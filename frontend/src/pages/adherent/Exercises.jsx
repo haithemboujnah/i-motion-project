@@ -60,7 +60,7 @@ const Exercises = () => {
 
   // ✅ Catégories adaptées à vos exercices
   const categories = [
-    { value: 'all', label: '📋 Tous', icon: FaDumbbell },
+    { value: 'all', label: 'Tous', icon: FaDumbbell },
     { value: 'ems', label: '⚡ EMS', icon: FaBolt, color: '#57a1ce' },
     { value: 'imodel', label: '🏋️ I-Model', icon: FaWeight, color: '#22c55e' },
     { value: 'ishape', label: '💆 I-Shape', icon: FaHandSparkles, color: '#8b5cf6' },
@@ -80,22 +80,22 @@ const Exercises = () => {
   };
 
   const difficulties = [
-    { value: 'all', label: '📊 Tous niveaux' },
-    { value: 'debutant', label: '🟢 Débutant' },
-    { value: 'intermediaire', label: '🟡 Intermédiaire' },
-    { value: 'avance', label: '🔴 Avancé' }
+    { value: 'all', label: 'Tous niveaux' },
+    { value: 'debutant', label: 'Débutant' },
+    { value: 'intermediaire', label: 'Intermédiaire' },
+    { value: 'avance', label: 'Avancé' }
   ];
 
   const muscleGroups = [
-    { value: 'all', label: '🎯 Tous' },
-    { value: 'jambes', label: '🦵 Jambes' },
-    { value: 'abdominaux', label: '💪 Abdominaux' },
-    { value: 'dos', label: '🔙 Dos' },
-    { value: 'fessiers', label: '🍑 Fessiers' },
-    { value: 'bras', label: '💪 Bras' },
-    { value: 'corps_entier', label: '🏋️ Corps entier' },
-    { value: 'visage', label: '👤 Visage' },
-    { value: 'lombaires', label: '🔽 Lombaires' }
+    { value: 'all', label: 'Tous' },
+    { value: 'jambes', label: 'Jambes' },
+    { value: 'abdominaux', label: 'Abdominaux' },
+    { value: 'dos', label: 'Dos' },
+    { value: 'fessiers', label: 'Fessiers' },
+    { value: 'bras', label: 'Bras' },
+    { value: 'corps_entier', label: 'Corps entier' },
+    { value: 'visage', label: 'Visage' },
+    { value: 'lombaires', label: 'Lombaires' }
   ];
 
   // ✅ Statistiques des exercices par catégorie

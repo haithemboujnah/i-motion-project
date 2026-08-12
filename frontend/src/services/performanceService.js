@@ -2,8 +2,21 @@ import api from './api';
 
 export const performanceService = {
   addMeasurement: async (data) => {
-    const response = await api.post('/performance/measurements', data);
-    return response.data;
+    try {
+      const payload = {
+        weight: parseFloat(data.weight),
+        body_fat: data.body_fat ? parseFloat(data.body_fat) : null,
+        muscle_mass: data.muscle_mass ? parseFloat(data.muscle_mass) : null,
+        notes: data.notes || null,
+        measured_at: data.measured_at || new Date().toISOString()
+      };
+      
+      const response = await api.post('/performance/measurements', payload);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error adding measurement:', error);
+      throw error;
+    }
   },
 
   getMeasurements: async (limit = 30) => {
@@ -28,10 +41,7 @@ export const performanceService = {
 
   downloadPDF: async () => {
     const response = await api.get('/performance/report/pdf', {
-      responseType: 'blob',
-      headers: {
-        'Accept': 'application/pdf'
-      }
+      responseType: 'blob'
     });
     return response;
   }

@@ -23,6 +23,7 @@ router.get('/admin/pending-renewals', authenticate, authorize('admin'), PaymentC
 router.get('/admin/expiring-subscriptions', authenticate, authorize('admin'), PaymentController.getExpiringSubscriptions);
 router.put('/admin/renewals/:subscriptionId/approve', authenticate, authorize('admin'), PaymentController.approveRenewal);
 router.put('/admin/renewals/:subscriptionId/reject', authenticate, authorize('admin'), PaymentController.rejectRenewal);
+router.get('/admin/user-subscription/:userId', authenticate, authorize('coach', 'admin'), PaymentController.getUserSubscription);
 
 // ✅ Webhook
 router.post('/webhook', express.raw({ type: 'application/json' }), PaymentController.handleWebhook);

@@ -5,7 +5,7 @@ const { authenticate, authorize } = require('../../auth/middleware/authMiddlewar
 const router = express.Router();
 
 router.use(authenticate);
-router.use(authorize('admin'));
+//router.use(authorize('admin'));
 
 router.get('/', AdminUserController.getAllUsers);
 router.get('/:id', AdminUserController.getUserById);

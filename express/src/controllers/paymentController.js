@@ -223,44 +223,44 @@ class PaymentController {
   // ✅ Updated confirmPayment with new prices
   static async confirmPayment(req, res) {
     try {
-      const { paymentIntentId, testMode } = req.body;
+      const { paymentIntentId, testMode, coach_id } = req.body;
       const userId = req.user.userId;
       
-      console.log(`📝 Confirmation paiement: ${paymentIntentId}, userId=${userId}, testMode=${testMode}`);
+      console.log(`📝 Confirmation paiement: ${paymentIntentId}, userId=${userId}, coachId=${coach_id}, testMode=${testMode}`);
       
       // ✅ Mode test - Paiement simulé
       if (testMode || (paymentIntentId && paymentIntentId.startsWith('pi_test_'))) {
         console.log('🧪 Mode test - paiement simulé');
         
         let planId = '12_seances';
-        let amount = 600.00;  // ✅ Updated
+        let amount = 600.00;
         let planName = '12 Séances';
         let sessionsTotal = 12;
         
-        // ✅ Déterminer le plan avec les nouveaux prix
+        // ✅ Déterminer le plan
         if (paymentIntentId && paymentIntentId.includes('1_seance')) { 
           planId = '1_seance'; 
-          amount = 60.00;  // ✅ Updated
+          amount = 60.00;
           planName = '1 Séance';
           sessionsTotal = 1;
         } else if (paymentIntentId && paymentIntentId.includes('12_seances')) { 
           planId = '12_seances'; 
-          amount = 600.00;  // ✅ Updated
+          amount = 600.00;
           planName = '12 Séances';
           sessionsTotal = 12;
         } else if (paymentIntentId && paymentIntentId.includes('20_seances')) { 
           planId = '20_seances'; 
-          amount = 950.00;  // ✅ Updated
+          amount = 950.00;
           planName = '20 Séances';
           sessionsTotal = 20;
         } else if (paymentIntentId && paymentIntentId.includes('1_an')) { 
           planId = '1_an'; 
-          amount = 2900.00;  // ✅ Updated
+          amount = 2900.00;
           planName = '1 An Illimité';
           sessionsTotal = null;
         } else if (paymentIntentId && paymentIntentId.includes('2_ans')) { 
           planId = '2_ans'; 
-          amount = 5400.00;  // ✅ Updated
+          amount = 5400.00;
           planName = '2 Ans Illimité';
           sessionsTotal = null;
         }
@@ -269,33 +269,45 @@ class PaymentController {
         const endDate = new Date();
         
         switch(planId) {
-          case '1_seance': 
-            endDate.setDate(endDate.getDate() + 7);
-            break;
-          case '12_seances': 
-            endDate.setMonth(endDate.getMonth() + 3);
-            break;
-          case '20_seances': 
-            endDate.setMonth(endDate.getMonth() + 6);
-            break;
-          case '1_an': 
-            endDate.setFullYear(endDate.getFullYear() + 1);
-            break;
-          case '2_ans': 
-            endDate.setFullYear(endDate.getFullYear() + 2);
-            break;
-          default: 
-            endDate.setMonth(endDate.getMonth() + 1);
+          case '1_seance': endDate.setDate(endDate.getDate() + 7); break;
+          case '12_seances': endDate.setMonth(endDate.getMonth() + 3); break;
+          case '20_seances': endDate.setMonth(endDate.getMonth() + 6); break;
+          case '1_an': endDate.setFullYear(endDate.getFullYear() + 1); break;
+          case '2_ans': endDate.setFullYear(endDate.getFullYear() + 2); break;
+          default: endDate.setMonth(endDate.getMonth() + 1);
         }
         
-        // ✅ Create subscription with new prices
+        // ✅ Vérifier que le coach existe (CORRIGÉ)
+        let coachFirstName = null;
+        let coachLastName = null;
+        let coachEmail = null;
+        
+        if (coach_id) {
+          try {
+            const User = require('../models/User');
+            const coach = await User.findById(coach_id);
+            if (coach && coach.role === 'coach') {
+              coachFirstName = coach.first_name;
+              coachLastName = coach.last_name;
+              coachEmail = coach.email;
+              console.log(`✅ Coach trouvé: ${coachFirstName} ${coachLastName}`);
+            } else {
+              console.warn(`⚠️ Coach non trouvé ou rôle incorrect pour l'ID ${coach_id}`);
+            }
+          } catch (err) {
+            console.error('❌ Erreur lors de la récupération du coach:', err.message);
+          }
+        }
+        
+        // ✅ Create subscription with coach_id
         const subscription = await Subscription.create({
           user_id: userId,
+          coach_id: coach_id || null,
           stripe_subscription_id: paymentIntentId || `test_${Date.now()}`,
           stripe_customer_id: null,
           plan_type: planId,
           plan_name: planName,
-          amount: amount,  // ✅ Updated price
+          amount: amount,
           currency: 'eur',
           status: 'active',
           sessions_total: sessionsTotal,
@@ -305,11 +317,14 @@ class PaymentController {
           end_date: endDate
         });
         
-        // ✅ Create transaction with new price
+        // ✅ Récupérer l'abonnement avec les infos du coach
+        const subscriptionWithCoach = await Subscription.findById(subscription.id);
+        
+        // ✅ Create transaction
         const transaction = await Transaction.create({
           user_id: userId,
           subscription_id: subscription.id,
-          amount: amount,  // ✅ Updated price
+          amount: amount,
           currency: 'eur',
           status: 'completed',
           payment_method: 'test',
@@ -318,7 +333,9 @@ class PaymentController {
             plan_id: planId, 
             plan_name: planName,
             sessions_total: sessionsTotal,
-            price: amount,  // ✅ Store the price
+            price: amount,
+            coach_id: coach_id || null,
+            coach_name: coachFirstName && coachLastName ? `${coachFirstName} ${coachLastName}` : null,
             test_mode: true,
             confirmed_at: new Date().toISOString()
           }
@@ -328,12 +345,14 @@ class PaymentController {
           success: true,
           message: '✅ Paiement test confirmé et abonnement activé',
           data: { 
-            subscription,
+            subscription: subscriptionWithCoach,
             transaction,
             testMode: true,
             sessions_remaining: sessionsTotal,
             expires_at: endDate,
-            amount: amount  // ✅ Return the price
+            amount: amount,
+            coach_id: coach_id || null,
+            coach_name: coachFirstName && coachLastName ? `${coachFirstName} ${coachLastName}` : null
           }
         });
       }
@@ -354,9 +373,8 @@ class PaymentController {
       
       const planId = paymentIntent.metadata.plan_id || '12_seances';
       const planName = paymentIntent.metadata.plan_name || '12 Séances';
-      const amount = paymentIntent.amount / 100;  // ✅ Updated price from Stripe
+      const amount = paymentIntent.amount / 100;
       
-      // ✅ Determine sessions based on plan
       let sessionsTotal = null;
       switch(planId) {
         case '1_seance': sessionsTotal = 1; break;
@@ -378,8 +396,31 @@ class PaymentController {
         default: endDate.setMonth(endDate.getMonth() + 1);
       }
       
+      // ✅ Vérifier que le coach existe (CORRIGÉ)
+      let coachFirstName = null;
+      let coachLastName = null;
+      let coachEmail = null;
+      
+      if (coach_id) {
+        try {
+          const User = require('../models/User');
+          const coach = await User.findById(coach_id);
+          if (coach && coach.role === 'coach') {
+            coachFirstName = coach.first_name;
+            coachLastName = coach.last_name;
+            coachEmail = coach.email;
+            console.log(`✅ Coach trouvé: ${coachFirstName} ${coachLastName}`);
+          } else {
+            console.warn(`⚠️ Coach non trouvé ou rôle incorrect pour l'ID ${coach_id}`);
+          }
+        } catch (err) {
+          console.error('❌ Erreur lors de la récupération du coach:', err.message);
+        }
+      }
+      
       const subscription = await Subscription.create({
         user_id: userId,
+        coach_id: coach_id || null,
         stripe_subscription_id: paymentIntentId,
         stripe_customer_id: paymentIntent.customer || null,
         plan_type: planId,
@@ -394,6 +435,8 @@ class PaymentController {
         end_date: endDate
       });
       
+      const subscriptionWithCoach = await Subscription.findById(subscription.id);
+      
       await Transaction.create({
         user_id: userId,
         subscription_id: subscription.id,
@@ -406,6 +449,8 @@ class PaymentController {
           plan_id: planId,
           plan_name: planName,
           price: amount,
+          coach_id: coach_id || null,
+          coach_name: coachFirstName && coachLastName ? `${coachFirstName} ${coachLastName}` : null,
           payment_intent: paymentIntent
         }
       });
@@ -414,8 +459,10 @@ class PaymentController {
         success: true,
         message: '✅ Paiement confirmé et abonnement activé',
         data: { 
-          subscription,
-          amount: amount
+          subscription: subscriptionWithCoach,
+          amount: amount,
+          coach_id: coach_id || null,
+          coach_name: coachFirstName && coachLastName ? `${coachFirstName} ${coachLastName}` : null
         }
       });
     } catch (error) {
@@ -857,6 +904,25 @@ class PaymentController {
       res.status(500).json({
         success: false,
         error: 'Erreur lors de la récupération des abonnements expirant'
+      });
+    }
+  }
+
+  static async getUserSubscription(req, res) {
+    try {
+      const { userId } = req.params;
+      
+      const subscription = await Subscription.findByUserId(userId);
+      
+      res.json({
+        success: true,
+        data: { subscription: subscription || null }
+      });
+    } catch (error) {
+      console.error('❌ Error getting user subscription:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération de l\'abonnement'
       });
     }
   }

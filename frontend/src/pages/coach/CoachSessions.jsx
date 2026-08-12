@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FaCalendar, FaClock, FaUser, FaPlus, FaSearch, 
-  FaFilter, FaCheck, FaTimes, FaEye, FaEdit,
-  FaTrash, FaSpinner, FaQrcode, FaImage,
-  FaBolt, FaWeight, FaHandSparkles, FaUserMd
+  FaFilter, FaCheck, FaTimes, FaTrash, FaSpinner,
+  FaQrcode, FaCamera
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import CoachNavbar from '../../components/coach/CoachNavbar';
 import CoachSidebar from '../../components/coach/CoachSidebar';
+import QRImageScanner from '../../components/qr/QRImageScanner';
 import { coachService } from '../../services/coachService';
 import { authService } from '../../services/authService';
 import { formatDate, formatTime, formatSessionDate } from '../../utils/dateUtils';
@@ -23,13 +23,13 @@ const CoachSessions = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
-  const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [scanningSession, setScanningSession] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [adherents, setAdherents] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({
     adherent_id: '',
     date: '',
@@ -38,7 +38,6 @@ const CoachSessions = () => {
     type: 'EMS'
   });
 
-  // ✅ Types de séances basés sur vos exercices
   const sessionTypes = [
     { value: 'EMS', label: 'EMS', icon: '⚡', color: '#57a1ce' },
     { value: 'I-Model', label: 'I-Model', icon: '🏋️', color: '#22c55e' },
@@ -131,11 +130,26 @@ const CoachSessions = () => {
     return labels[status] || status;
   };
 
-  // ✅ Créer une séance (CORRIGÉ)
+  // ✅ Ouvrir le scanner QR pour une séance
+  const handleOpenQRScanner = (session) => {
+    setScanningSession(session);
+    setShowQRScanner(true);
+  };
+
+  // ✅ Gérer le scan QR terminé
+  const handleQRScanComplete = (data) => {
+    console.log('✅ Pointage effectué:', data);
+    toast.success(`✅ ${data.adherent.first_name} ${data.adherent.last_name} pointé !`);
+    fetchData();
+    setTimeout(() => {
+      setShowQRScanner(false);
+      setScanningSession(null);
+    }, 2000);
+  };
+
   const handleCreateSession = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (!formData.adherent_id) {
       toast.error('Veuillez sélectionner un adhérent');
       return;
@@ -153,8 +167,7 @@ const CoachSessions = () => {
     
     setSubmitting(true);
     try {
-      // ✅ Envoyer les données au service
-      const response = await coachService.createSession({
+      await coachService.createSession({
         adherent_id: parseInt(formData.adherent_id),
         date: formData.date,
         time: formData.time,
@@ -162,7 +175,6 @@ const CoachSessions = () => {
         type: formData.type || 'EMS'
       });
       
-      console.log('✅ Séance créée:', response);
       toast.success('✅ Séance créée avec succès !');
       setShowCreateModal(false);
       setFormData({ 
@@ -172,7 +184,7 @@ const CoachSessions = () => {
         duration: 20, 
         type: 'EMS' 
       });
-      fetchData(); // Recharger les données
+      fetchData();
     } catch (error) {
       console.error('❌ Error creating session:', error);
       toast.error(error.response?.data?.error || 'Erreur lors de la création');
@@ -204,30 +216,6 @@ const CoachSessions = () => {
     }
   };
 
-  const handleQRScanComplete = (data) => {
-    console.log('✅ Pointage effectué:', data);
-    toast.success(`✅ ${data.adherent.first_name} ${data.adherent.last_name} pointé !`);
-    fetchData();
-    setTimeout(() => {
-      setShowQRScanner(false);
-    }, 2000);
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      'reserved': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      'confirmed': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      'completed': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      'cancelled': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-  };
-
-  // ✅ Rediriger vers la page de création
-  const handleCreateClick = () => {
-    navigate('/coach/sessions/create');
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-primary">
       <CoachNavbar />
@@ -242,12 +230,12 @@ const CoachSessions = () => {
                   📅 Gestion des séances
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  Gérez vos séances et pointez les adhérents
+                  Gérez vos séances et pointez les adhérents avec QR Code
                 </p>
               </div>
               <div className="mt-4 md:mt-0 flex gap-3">
                 <button
-                  onClick={handleCreateClick}
+                  onClick={() => setShowCreateModal(true)}
                   className="btn-logo text-sm flex items-center gap-2"
                 >
                   <FaPlus /> Nouvelle séance
@@ -346,7 +334,18 @@ const CoachSessions = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 mt-4 md:mt-0 flex-wrap">
-                            {/* Actions */}
+                            {/* ✅ Bouton Scanner QR Code */}
+                            {(session.status === 'confirmed' || session.status === 'reserved') && (
+                              <button
+                                onClick={() => handleOpenQRScanner(session)}
+                                className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition flex items-center gap-1"
+                                title="Scanner QR Code"
+                              >
+                                <FaQrcode className="text-lg" />
+                                <span className="text-xs font-medium hidden sm:inline">Scanner</span>
+                              </button>
+                            )}
+                            {/* Actions existantes */}
                             {session.status === 'reserved' && (
                               <>
                                 <button
@@ -406,7 +405,7 @@ const CoachSessions = () => {
                     <FaCalendar className="text-6xl text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                     <p className="text-gray-500 dark:text-gray-400">Aucune séance trouvée</p>
                     <button
-                      onClick={handleCreateClick}
+                      onClick={() => setShowCreateModal(true)}
                       className="btn-logo text-sm inline-block mt-4"
                     >
                       <FaPlus className="inline mr-2" />
@@ -419,6 +418,54 @@ const CoachSessions = () => {
           </div>
         </main>
       </div>
+
+      {/* ✅ Modal Scanner QR Code */}
+      {showQRScanner && scanningSession && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-dark-card rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <FaCamera className="text-purple-500" />
+                  Scanner QR Code
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {formatDate(scanningSession.date)} à {formatTime(scanningSession.time)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowQRScanner(false);
+                  setScanningSession(null);
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                <FaTimes className="text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* ✅ Composant QRImageScanner */}
+            <QRImageScanner
+              sessionId={scanningSession.id}
+              onScanComplete={handleQRScanComplete}
+            />
+
+            <button
+              onClick={() => {
+                setShowQRScanner(false);
+                setScanningSession(null);
+              }}
+              className="w-full btn-secondary mt-4"
+            >
+              Fermer le scanner
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* Modal Suppression */}
       {showDeleteModal && selectedSession && (

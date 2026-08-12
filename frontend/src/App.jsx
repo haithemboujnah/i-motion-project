@@ -29,6 +29,8 @@ import CoachPerformance from './pages/coach/CoachPerformance';
 import CoachNotifications from './pages/coach/CoachNotifications';
 import CoachSessionCreate from './pages/coach/CoachSessionCreate';
 import CoachExercises from './pages/coach/CoachExercises';
+import CoachSubscriptions from './pages/coach/CoachSubscriptions';
+import CoachSubscriptionDetail from './pages/coach/CoachSubscriptionDetail';
 
 // Pages Admin
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -119,7 +121,9 @@ const App = () => {
             <Route path="/coach/sessions/create" element={<ProtectedRoute allowedRoles={['coach', 'admin']}><CoachSessionCreate  /></ProtectedRoute>} />
             <Route path="/coach/exercises" element={<ProtectedRoute allowedRoles={['coach', 'admin']}><CoachExercises /></ProtectedRoute>} />
             <Route path="/coach/attendance-history" element={<ProtectedRoute allowedRoles={['coach', 'admin']}><CoachAttendanceHistory /></ProtectedRoute>} />
-            
+            <Route path="/coach/subscriptions" element={<ProtectedRoute allowedRoles={['coach', 'admin']}><CoachSubscriptions /></ProtectedRoute>} />
+            <Route path="/coach/subscriptions/:adherentId/detail" element={<ProtectedRoute allowedRoles={['coach', 'admin']}><CoachSubscriptionDetail /></ProtectedRoute>} />
+
             {/* Routes Admin */}
             <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />

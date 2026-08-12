@@ -4,7 +4,10 @@ import {
   FaTrophy, FaMedal, FaStar, FaFire, FaPlus,
   FaEdit, FaTrash, FaSave, FaTimes, FaGift,
   FaCalendar, FaClock, FaUsers, FaAward,
-  FaCheckCircle, FaExclamationTriangle, FaInfoCircle
+  FaCheckCircle, FaExclamationTriangle, FaInfoCircle,
+  FaBolt, FaDumbbell, FaSpa, FaGem, FaSearch,
+  FaWalking, FaHeartbeat, FaCrown, FaBullseye,
+  FaChartLine, FaMagic, FaUserAstronaut
 } from 'react-icons/fa';
 import { useTheme } from '../../context/ThemeContext';
 import AdminNavbar from '../../components/admin/AdminNavbar';
@@ -49,7 +52,11 @@ const AdminGamification = () => {
     { value: 'difficile', label: 'Difficile', icon: '🔴', color: 'text-red-500 dark:text-red-400' }
   ];
 
-  const iconOptions = ['🏆', '🥇', '🥈', '🥉', '⭐', '🔥', '💪', '🌟', '🎯', '👑', '🏃', '🎖️'];
+  const iconOptions = [
+    '🏆', '🥇', '🥈', '🥉', '⭐', '🔥', '💪', '🌟', '🎯', '👑', '🏃', '🎖️',
+    '⚡', '🏋️', '💆', '✨', '🔍', '🦵', '📊', '📈', '👑', '🎯', '🏅',
+    '💪', '🔥', '🌟', '🎖️', '🏆', '🥇', '🥈', '🥉'
+  ];
 
   useEffect(() => {
     fetchData();
@@ -248,6 +255,65 @@ const AdminGamification = () => {
     return icons[difficulty] || '⚪';
   };
 
+  const getBadgeColor = (badge) => {
+    const colors = {
+      'EMS': 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+      'I-Model': 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
+      'I-Shape': 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
+      'I-Face': 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800',
+      'Explorateur': 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800',
+      'Maître': 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
+      'Expert': 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800',
+      'Régulier': 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800',
+      'Polyvalent': 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800',
+      'Transformation': 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
+      'Métamorphose': 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800'
+    };
+    
+    for (const [key, value] of Object.entries(colors)) {
+      if (badge.name.includes(key)) return value;
+    }
+    return 'bg-gray-50 dark:bg-gray-800/20 border-gray-200 dark:border-gray-700';
+  };
+
+  // Composant Modal réutilisable avec scroll
+  const ModalWrapper = ({ children, onClose, title, subtitle }) => (
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-theme-card rounded-2xl max-w-2xl w-full max-h-[90vh] border border-theme flex flex-col"
+      >
+        {/* Header fixe */}
+        <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-theme">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                {title}
+              </h2>
+              {subtitle && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition flex-shrink-0"
+            >
+              <FaTimes className="text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+        </div>
+
+        {/* Contenu scrollable */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+          {children}
+        </div>
+      </motion.div>
+    </div>
+  );
+
   return (
     <div className={`min-h-screen ${isDark ? 'dark' : ''}`}>
       <AdminNavbar />
@@ -323,12 +389,14 @@ const AdminGamification = () => {
                           {badges.map((badge) => (
                             <div
                               key={badge.id}
-                              className="bg-theme-card rounded-xl p-4 shadow-sm hover:shadow-md transition text-center border border-theme"
+                              className={`bg-theme-card rounded-xl p-4 shadow-sm hover:shadow-md transition border ${getBadgeColor(badge)}`}
                             >
-                              <div className="text-4xl mb-2">{badge.icon}</div>
-                              <p className="font-medium text-theme-primary text-sm">{badge.name}</p>
-                              <p className="text-xs text-theme-secondary mt-1">{badge.description}</p>
-                              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+                              <div className="text-4xl mb-2 flex justify-center">
+                                {badge.icon}
+                              </div>
+                              <p className="font-medium text-theme-primary text-sm text-center">{badge.name}</p>
+                              <p className="text-xs text-theme-secondary mt-1 text-center line-clamp-2">{badge.description}</p>
+                              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 text-center">
                                 {badge.points_required} pts
                               </p>
                               <div className="flex justify-center gap-2 mt-3 pt-3 border-t border-theme">
@@ -463,471 +531,393 @@ const AdminGamification = () => {
 
       {/* ==================== MODAL CRÉATION BADGE ==================== */}
       {showCreateBadgeModal && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-theme-card rounded-2xl p-6 max-w-md w-full border border-theme"
-          >
-            <div className="flex justify-between items-center mb-4">
+        <ModalWrapper
+          title="🏅 Créer un badge"
+          subtitle="Définissez un nouveau badge pour les adhérents"
+          onClose={() => setShowCreateBadgeModal(false)}
+        >
+          <form onSubmit={handleCreateBadge}>
+            <div className="space-y-4">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  🏅 Créer un badge
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Définissez un nouveau badge pour les adhérents
-                </p>
+                <label className="label-custom">Nom du badge *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-logo"
+                  value={badgeForm.name}
+                  onChange={(e) => setBadgeForm({ ...badgeForm, name: e.target.value })}
+                  placeholder="Ex: Expert"
+                />
               </div>
+              <div>
+                <label className="label-custom">Description *</label>
+                <textarea
+                  className="input-logo"
+                  rows="2"
+                  required
+                  value={badgeForm.description}
+                  onChange={(e) => setBadgeForm({ ...badgeForm, description: e.target.value })}
+                  placeholder="Description du badge..."
+                />
+              </div>
+              <div>
+                <label className="label-custom">Icône</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {iconOptions.map((icon) => (
+                    <button
+                      key={icon}
+                      type="button"
+                      className={`p-2 rounded-lg text-2xl transition ${
+                        badgeForm.icon === icon
+                          ? 'bg-indigo-100 border-2 border-indigo-500 dark:bg-indigo-900/30'
+                          : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700'
+                      }`}
+                      onClick={() => setBadgeForm({ ...badgeForm, icon })}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="label-custom">Points requis</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  className="input-logo"
+                  value={badgeForm.points_required}
+                  onChange={(e) => setBadgeForm({ ...badgeForm, points_required: parseInt(e.target.value) || 0 })}
+                  placeholder="100"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
-                onClick={() => setShowCreateBadgeModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                type="submit"
+                className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
               >
-                <FaTimes className="text-gray-500" />
+                <FaSave className="inline mr-2" />
+                Créer le badge
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateBadgeModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Annuler
               </button>
             </div>
-
-            <form onSubmit={handleCreateBadge}>
-              <div className="space-y-4">
-                <div>
-                  <label className="label-custom">Nom du badge *</label>
-                  <input
-                    type="text"
-                    required
-                    className="input-logo"
-                    value={badgeForm.name}
-                    onChange={(e) => setBadgeForm({ ...badgeForm, name: e.target.value })}
-                    placeholder="Ex: Expert"
-                  />
-                </div>
-                <div>
-                  <label className="label-custom">Description *</label>
-                  <textarea
-                    className="input-logo"
-                    rows="2"
-                    required
-                    value={badgeForm.description}
-                    onChange={(e) => setBadgeForm({ ...badgeForm, description: e.target.value })}
-                    placeholder="Description du badge..."
-                  />
-                </div>
-                <div>
-                  <label className="label-custom">Icône</label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {iconOptions.map((icon) => (
-                      <button
-                        key={icon}
-                        type="button"
-                        className={`p-2 rounded-lg text-2xl transition ${
-                          badgeForm.icon === icon
-                            ? 'bg-indigo-100 border-2 border-indigo-500'
-                            : 'bg-gray-50 hover:bg-gray-100'
-                        }`}
-                        onClick={() => setBadgeForm({ ...badgeForm, icon })}
-                      >
-                        {icon}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="label-custom">Points requis</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    className="input-logo"
-                    value={badgeForm.points_required}
-                    onChange={(e) => setBadgeForm({ ...badgeForm, points_required: parseInt(e.target.value) || 0 })}
-                    placeholder="100"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button
-                  type="submit"
-                  className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
-                >
-                  <FaSave className="inline mr-2" />
-                  Créer le badge
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateBadgeModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Annuler
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
+          </form>
+        </ModalWrapper>
       )}
 
       {/* ==================== MODAL ÉDITION BADGE ==================== */}
       {showEditBadgeModal && selectedBadge && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-theme-card rounded-2xl p-6 max-w-md w-full border border-theme"
-          >
-            <div className="flex justify-between items-center mb-4">
+        <ModalWrapper
+          title="✏️ Modifier le badge"
+          subtitle={selectedBadge.name}
+          onClose={() => setShowEditBadgeModal(false)}
+        >
+          <form onSubmit={handleEditBadge}>
+            <div className="space-y-4">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  ✏️ Modifier le badge
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  {selectedBadge.name}
-                </p>
+                <label className="label-custom">Nom du badge *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-logo"
+                  value={badgeForm.name}
+                  onChange={(e) => setBadgeForm({ ...badgeForm, name: e.target.value })}
+                  placeholder="Ex: Expert"
+                />
               </div>
+              <div>
+                <label className="label-custom">Description *</label>
+                <textarea
+                  className="input-logo"
+                  rows="2"
+                  required
+                  value={badgeForm.description}
+                  onChange={(e) => setBadgeForm({ ...badgeForm, description: e.target.value })}
+                  placeholder="Description du badge..."
+                />
+              </div>
+              <div>
+                <label className="label-custom">Icône</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {iconOptions.map((icon) => (
+                    <button
+                      key={icon}
+                      type="button"
+                      className={`p-2 rounded-lg text-2xl transition ${
+                        badgeForm.icon === icon
+                          ? 'bg-indigo-100 border-2 border-indigo-500 dark:bg-indigo-900/30'
+                          : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700'
+                      }`}
+                      onClick={() => setBadgeForm({ ...badgeForm, icon })}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="label-custom">Points requis</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  className="input-logo"
+                  value={badgeForm.points_required}
+                  onChange={(e) => setBadgeForm({ ...badgeForm, points_required: parseInt(e.target.value) || 0 })}
+                  placeholder="100"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
-                onClick={() => setShowEditBadgeModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                type="submit"
+                className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
               >
-                <FaTimes className="text-gray-500" />
+                <FaSave className="inline mr-2" />
+                Enregistrer
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditBadgeModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Annuler
               </button>
             </div>
+          </form>
+        </ModalWrapper>
+      )}
 
-            <form onSubmit={handleEditBadge}>
-              <div className="space-y-4">
+      {/* ==================== MODAL CRÉATION CHALLENGE ==================== */}
+      {showCreateChallengeModal && (
+        <ModalWrapper
+          title="🎯 Créer un challenge"
+          subtitle="Définissez un nouveau défi pour les adhérents"
+          onClose={() => setShowCreateChallengeModal(false)}
+        >
+          <form onSubmit={handleCreateChallenge}>
+            <div className="space-y-4">
+              <div>
+                <label className="label-custom">Nom du challenge *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-logo"
+                  value={challengeForm.name}
+                  onChange={(e) => setChallengeForm({ ...challengeForm, name: e.target.value })}
+                  placeholder="Ex: Challenge Cardio"
+                />
+              </div>
+              <div>
+                <label className="label-custom">Description *</label>
+                <textarea
+                  className="input-logo"
+                  rows="3"
+                  required
+                  value={challengeForm.description}
+                  onChange={(e) => setChallengeForm({ ...challengeForm, description: e.target.value })}
+                  placeholder="Décrivez le challenge..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label-custom">Nom du badge *</label>
-                  <input
-                    type="text"
-                    required
-                    className="input-logo"
-                    value={badgeForm.name}
-                    onChange={(e) => setBadgeForm({ ...badgeForm, name: e.target.value })}
-                    placeholder="Ex: Expert"
-                  />
-                </div>
-                <div>
-                  <label className="label-custom">Description *</label>
-                  <textarea
-                    className="input-logo"
-                    rows="2"
-                    required
-                    value={badgeForm.description}
-                    onChange={(e) => setBadgeForm({ ...badgeForm, description: e.target.value })}
-                    placeholder="Description du badge..."
-                  />
-                </div>
-                <div>
-                  <label className="label-custom">Icône</label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {iconOptions.map((icon) => (
+                  <label className="label-custom">Difficulté</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {difficultyOptions.map((diff) => (
                       <button
-                        key={icon}
+                        key={diff.value}
                         type="button"
-                        className={`p-2 rounded-lg text-2xl transition ${
-                          badgeForm.icon === icon
-                            ? 'bg-indigo-100 border-2 border-indigo-500'
-                            : 'bg-gray-50 hover:bg-gray-100'
+                        className={`p-3 rounded-xl border-2 text-center transition ${
+                          challengeForm.difficulty === diff.value
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-md'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                         }`}
-                        onClick={() => setBadgeForm({ ...badgeForm, icon })}
+                        onClick={() => setChallengeForm({ ...challengeForm, difficulty: diff.value })}
                       >
-                        {icon}
+                        <div className="text-2xl">{diff.icon}</div>
+                        <p className={`text-xs font-medium ${
+                          challengeForm.difficulty === diff.value 
+                            ? 'text-indigo-600 dark:text-indigo-400' 
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}>
+                          {diff.label}
+                        </p>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="label-custom">Points requis</label>
+                  <label className="label-custom">Points de récompense *</label>
                   <input
                     type="number"
                     required
                     min="0"
                     className="input-logo"
-                    value={badgeForm.points_required}
-                    onChange={(e) => setBadgeForm({ ...badgeForm, points_required: parseInt(e.target.value) || 0 })}
-                    placeholder="100"
+                    value={challengeForm.points_reward}
+                    onChange={(e) => setChallengeForm({ ...challengeForm, points_reward: parseInt(e.target.value) || 0 })}
+                    placeholder="50"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button
-                  type="submit"
-                  className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
-                >
-                  <FaSave className="inline mr-2" />
-                  Enregistrer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditBadgeModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Annuler
-                </button>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label-custom">Date de début *</label>
+                  <input
+                    type="date"
+                    required
+                    className="input-logo"
+                    value={challengeForm.start_date}
+                    onChange={(e) => setChallengeForm({ ...challengeForm, start_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label-custom">Date de fin *</label>
+                  <input
+                    type="date"
+                    required
+                    className="input-logo"
+                    value={challengeForm.end_date}
+                    onChange={(e) => setChallengeForm({ ...challengeForm, end_date: e.target.value })}
+                  />
+                </div>
               </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ==================== MODAL CRÉATION CHALLENGE ==================== */}
-      {showCreateChallengeModal && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-theme-card rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-theme"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  🎯 Créer un challenge
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Définissez un nouveau défi pour les adhérents
-                </p>
-              </div>
+            </div>
+            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
-                onClick={() => setShowCreateChallengeModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                type="submit"
+                className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
               >
-                <FaTimes className="text-gray-500" />
+                <FaSave className="inline mr-2" />
+                Créer le challenge
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateChallengeModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Annuler
               </button>
             </div>
-
-            <form onSubmit={handleCreateChallenge}>
-              <div className="space-y-4">
-                <div>
-                  <label className="label-custom">Nom du challenge *</label>
-                  <input
-                    type="text"
-                    required
-                    className="input-logo"
-                    value={challengeForm.name}
-                    onChange={(e) => setChallengeForm({ ...challengeForm, name: e.target.value })}
-                    placeholder="Ex: Challenge Cardio"
-                  />
-                </div>
-                <div>
-                  <label className="label-custom">Description *</label>
-                  <textarea
-                    className="input-logo"
-                    rows="3"
-                    required
-                    value={challengeForm.description}
-                    onChange={(e) => setChallengeForm({ ...challengeForm, description: e.target.value })}
-                    placeholder="Décrivez le challenge..."
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-custom">Difficulté</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {difficultyOptions.map((diff) => (
-                        <button
-                          key={diff.value}
-                          type="button"
-                          className={`p-3 rounded-xl border-2 text-center transition ${
-                            challengeForm.difficulty === diff.value
-                              ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => setChallengeForm({ ...challengeForm, difficulty: diff.value })}
-                        >
-                          <div className="text-2xl">{diff.icon}</div>
-                          <p className={`text-xs font-medium ${
-                            challengeForm.difficulty === diff.value 
-                              ? 'text-indigo-600' 
-                              : 'text-gray-600'
-                          }`}>
-                            {diff.label}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label-custom">Points de récompense *</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      className="input-logo"
-                      value={challengeForm.points_reward}
-                      onChange={(e) => setChallengeForm({ ...challengeForm, points_reward: parseInt(e.target.value) || 0 })}
-                      placeholder="50"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-custom">Date de début *</label>
-                    <input
-                      type="date"
-                      required
-                      className="input-logo"
-                      value={challengeForm.start_date}
-                      onChange={(e) => setChallengeForm({ ...challengeForm, start_date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="label-custom">Date de fin *</label>
-                    <input
-                      type="date"
-                      required
-                      className="input-logo"
-                      value={challengeForm.end_date}
-                      onChange={(e) => setChallengeForm({ ...challengeForm, end_date: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button
-                  type="submit"
-                  className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
-                >
-                  <FaSave className="inline mr-2" />
-                  Créer le challenge
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateChallengeModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Annuler
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
+          </form>
+        </ModalWrapper>
       )}
 
       {/* ==================== MODAL ÉDITION CHALLENGE ==================== */}
       {showEditChallengeModal && selectedChallenge && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-theme-card rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-theme"
-          >
-            <div className="flex justify-between items-center mb-4">
+        <ModalWrapper
+          title="✏️ Modifier le challenge"
+          subtitle={selectedChallenge.name}
+          onClose={() => setShowEditChallengeModal(false)}
+        >
+          <form onSubmit={handleEditChallenge}>
+            <div className="space-y-4">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  ✏️ Modifier le challenge
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  {selectedChallenge.name}
-                </p>
+                <label className="label-custom">Nom du challenge *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-logo"
+                  value={challengeForm.name}
+                  onChange={(e) => setChallengeForm({ ...challengeForm, name: e.target.value })}
+                />
               </div>
+              <div>
+                <label className="label-custom">Description *</label>
+                <textarea
+                  className="input-logo"
+                  rows="3"
+                  required
+                  value={challengeForm.description}
+                  onChange={(e) => setChallengeForm({ ...challengeForm, description: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label-custom">Difficulté</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {difficultyOptions.map((diff) => (
+                      <button
+                        key={diff.value}
+                        type="button"
+                        className={`p-3 rounded-xl border-2 text-center transition ${
+                          challengeForm.difficulty === diff.value
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-md'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                        }`}
+                        onClick={() => setChallengeForm({ ...challengeForm, difficulty: diff.value })}
+                      >
+                        <div className="text-2xl">{diff.icon}</div>
+                        <p className={`text-xs font-medium ${
+                          challengeForm.difficulty === diff.value 
+                            ? 'text-indigo-600 dark:text-indigo-400' 
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}>
+                          {diff.label}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="label-custom">Points de récompense *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    className="input-logo"
+                    value={challengeForm.points_reward}
+                    onChange={(e) => setChallengeForm({ ...challengeForm, points_reward: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label-custom">Date de début *</label>
+                  <input
+                    type="date"
+                    required
+                    className="input-logo"
+                    value={challengeForm.start_date}
+                    onChange={(e) => setChallengeForm({ ...challengeForm, start_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label-custom">Date de fin *</label>
+                  <input
+                    type="date"
+                    required
+                    className="input-logo"
+                    value={challengeForm.end_date}
+                    onChange={(e) => setChallengeForm({ ...challengeForm, end_date: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
-                onClick={() => setShowEditChallengeModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                type="submit"
+                className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
               >
-                <FaTimes className="text-gray-500" />
+                <FaSave className="inline mr-2" />
+                Enregistrer
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditChallengeModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Annuler
               </button>
             </div>
-
-            <form onSubmit={handleEditChallenge}>
-              <div className="space-y-4">
-                <div>
-                  <label className="label-custom">Nom du challenge *</label>
-                  <input
-                    type="text"
-                    required
-                    className="input-logo"
-                    value={challengeForm.name}
-                    onChange={(e) => setChallengeForm({ ...challengeForm, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="label-custom">Description *</label>
-                  <textarea
-                    className="input-logo"
-                    rows="3"
-                    required
-                    value={challengeForm.description}
-                    onChange={(e) => setChallengeForm({ ...challengeForm, description: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-custom">Difficulté</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {difficultyOptions.map((diff) => (
-                        <button
-                          key={diff.value}
-                          type="button"
-                          className={`p-3 rounded-xl border-2 text-center transition ${
-                            challengeForm.difficulty === diff.value
-                              ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => setChallengeForm({ ...challengeForm, difficulty: diff.value })}
-                        >
-                          <div className="text-2xl">{diff.icon}</div>
-                          <p className={`text-xs font-medium ${
-                            challengeForm.difficulty === diff.value 
-                              ? 'text-indigo-600' 
-                              : 'text-gray-600'
-                          }`}>
-                            {diff.label}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label-custom">Points de récompense *</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      className="input-logo"
-                      value={challengeForm.points_reward}
-                      onChange={(e) => setChallengeForm({ ...challengeForm, points_reward: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-custom">Date de début *</label>
-                    <input
-                      type="date"
-                      required
-                      className="input-logo"
-                      value={challengeForm.start_date}
-                      onChange={(e) => setChallengeForm({ ...challengeForm, start_date: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="label-custom">Date de fin *</label>
-                    <input
-                      type="date"
-                      required
-                      className="input-logo"
-                      value={challengeForm.end_date}
-                      onChange={(e) => setChallengeForm({ ...challengeForm, end_date: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button
-                  type="submit"
-                  className="btn-logo flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
-                >
-                  <FaSave className="inline mr-2" />
-                  Enregistrer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditChallengeModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Annuler
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
+          </form>
+        </ModalWrapper>
       )}
     </div>
   );

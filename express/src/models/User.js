@@ -25,9 +25,20 @@ class User {
   }
 
   static async findById(id) {
-    const query = 'SELECT id, email, password_hash, first_name, last_name, role, is_active, created_at, last_login FROM users WHERE id = $1';
-    const result = await pool.query(query, [id]);
-    return result.rows[0];
+    try {
+      const query = `
+        SELECT 
+          id, email, first_name, last_name, role, is_active, 
+          created_at, updated_at, last_login
+        FROM users 
+        WHERE id = $1
+      `;
+      const result = await pool.query(query, [id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('❌ Erreur dans findById:', error);
+      return null;
+    }
   }
 
   static async updateLastLogin(id) {
